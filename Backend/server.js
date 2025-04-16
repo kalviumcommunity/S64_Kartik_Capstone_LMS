@@ -38,6 +38,30 @@ app.post('/api/courses', (req, res) => {
     res.status(201).json(newCourse);
   });
   
+// PUT endpoint to update a course
+app.put('/api/courses/:id', (req, res) => {
+    const courseId = parseInt(req.params.id);
+    const { title, description } = req.body;
+  
+    const courseIndex = courses.findIndex(course => course.id === courseId);
+  
+    if (courseIndex === -1) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+  
+    if (!title || !description) {
+      return res.status(400).json({ message: 'Title and description are required' });
+    }
+  
+    courses[courseIndex] = {
+      id: courseId,
+      title,
+      description
+    };
+  
+    res.status(200).json(courses[courseIndex]);
+  });
+  
 
 // Start server
 app.listen(PORT, () => {
