@@ -77,4 +77,5 @@ EduSync delivers a complete and secure LMS solution tailored for modern educatio
 ## Backend -> 
 https://s64-kartik-capstone-lms.onrender.com
 ## Frontend ->
+https://s64-kartik-capstone-lms.vercel.app/
 
