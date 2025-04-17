@@ -70,3 +70,11 @@ With the growing need for accessible remote education, EduSync bridges the gap b
 ## Conclusion
 
 EduSync delivers a complete and secure LMS solution tailored for modern education. With a well-structured plan and robust tech stack, it aims to enhance the online learning experience for institutions, teachers, and students alike.
+
+
+
+# Deployment Links:-
+## Backend -> 
+https://s64-kartik-capstone-lms.onrender.com
+## Frontend ->
+
