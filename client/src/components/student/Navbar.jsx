@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 import { assets } from "../../assets/assets";
+import { AppContext } from "../../context/AppContext";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isEducator } = useContext(AppContext);
   const isCourseListPage = location.pathname.includes("/courses-list");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -31,7 +33,7 @@ const Navbar = () => {
 
   return (
     <div
-      className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${
+      className={`sticky top-0 z-50 flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-200 py-4 shadow-sm ${
         isCourseListPage ? "bg-white" : "bg-cyan-100/70"
       }`}
     >
@@ -41,12 +43,18 @@ const Navbar = () => {
 
       <div className="hidden md:flex items-center gap-5 text-gray-500">
         <div className="flex items-center gap-5">
-          <button 
-            onClick={() => navigate("/educator")} 
-            className="hover:text-blue-600 transition"
-          >
-            Become Educator
-          </button>
+          {isEducator ? (
+            <Link to="/educator/dashboard" className="hover:text-blue-600 transition">
+              Educator Dashboard
+            </Link>
+          ) : (
+            <button 
+              onClick={() => navigate("/educator")} 
+              className="hover:text-blue-600 transition"
+            >
+              Become Educator
+            </button>
+          )}
           |{" "}
           <Link to="/my-enrollments" className="hover:text-blue-600 transition">
             My Enrollments
@@ -56,7 +64,7 @@ const Navbar = () => {
         {isLoggedIn ? (
           <button
             onClick={handleLogout}
-            className="bg-red-600 text-white px-5 py-2 rounded-full hover:bg-red-700 transition"
+            className="bg-red-600 text-white px-5 py-2 rounded-full hover:bg-red-700 transition duration-300"
           >
             Logout
           </button>
@@ -70,7 +78,7 @@ const Navbar = () => {
             </button>
             <button
               onClick={handleCreateAccount}
-              className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition"
+              className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition duration-300"
             >
               Create Account
             </button>
@@ -80,12 +88,18 @@ const Navbar = () => {
 
       <div className="md:hidden flex items-center gap-2 sm:gap-5 text-gray-500">
         <div className="flex items-center gap-1 sm:gap-2 max-sm:text-xs">
-          <button 
-            onClick={() => navigate("/educator")}
-            className="hover:text-blue-600 transition"
-          >
-            Become Educator
-          </button>
+          {isEducator ? (
+            <Link to="/educator/dashboard" className="hover:text-blue-600 transition">
+              Dashboard
+            </Link>
+          ) : (
+            <button 
+              onClick={() => navigate("/educator")}
+              className="hover:text-blue-600 transition"
+            >
+              Become Educator
+            </button>
+          )}
           |{" "}
           <Link to="/my-enrollments" className="hover:text-blue-600 transition">
             My Enrollments
