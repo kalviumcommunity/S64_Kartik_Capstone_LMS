@@ -33,9 +33,10 @@ const Navbar = () => {
 
   return (
     <div
-      className={`sticky top-0 z-50 flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-200 py-4 shadow-sm ${
-        isCourseListPage ? "bg-white" : "bg-cyan-100/70"
+      className={`sticky top-0 z-50 flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-200 py-4 shadow-md ${
+        isCourseListPage ? "bg-white" : "bg-cyan-100"
       }`}
+      style={{ backdropFilter: "blur(8px)" }}
     >
       <Link to="/">
         <img src={logo} alt="logo" className="w-28 lg:w-32 cursor-pointer" />
@@ -49,7 +50,7 @@ const Navbar = () => {
             </Link>
           ) : (
             <button 
-              onClick={() => navigate("/educator")} 
+              onClick={() => navigate("/educator")}
               className="hover:text-blue-600 transition"
             >
               Become Educator
