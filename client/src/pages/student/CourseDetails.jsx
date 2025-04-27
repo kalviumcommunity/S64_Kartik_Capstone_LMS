@@ -2,6 +2,10 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 import Loading from '../../components/student/Loading';
+import { assets } from '../../assets/assets';
+import Footer from '../../components/student/Footer';
+import YouTube from 'react-youtube';
+import humanizeDuration from 'humanize-duration';
 
 const CourseDetails = () => {
   const { id } = useParams(); // Get the course ID from the URL
@@ -9,6 +13,9 @@ const CourseDetails = () => {
   const { allCourses } = useContext(AppContext); // Get all courses from context
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState({});
+  const [playerData, setPlayerData] = useState(null);
+  const [showVideoPopup, setShowVideoPopup] = useState(false);
+  const [selectedVideoId, setSelectedVideoId] = useState(null);
 
   useEffect(() => {
     const fetchCourseData = () => {
@@ -70,6 +77,50 @@ const CourseDetails = () => {
 
   const { totalLectures, totalDuration } = calculateCourseTotals();
 
+  const handlePreviewClick = (lecture) => {
+    if (!lecture || !lecture.lectureUrl) {
+      console.error('No video URL found for lecture:', lecture);
+      return;
+    }
+
+    const videoId = extractYouTubeId(lecture.lectureUrl);
+    if (!videoId) {
+      console.error('Invalid YouTube URL:', lecture.lectureUrl);
+      return;
+    }
+
+    setSelectedVideoId(videoId);
+    setShowVideoPopup(true);
+  };
+
+  const extractYouTubeId = (url) => {
+    if (!url) return null;
+    
+    // Handle different YouTube URL formats
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    
+    // If no match found, try to extract ID directly (in case it's just the ID)
+    if (!match) {
+      // Check if it's just an 11-character video ID
+      if (url.length === 11) {
+        return url;
+      }
+      return null;
+    }
+    
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const onPlayerError = (event) => {
+    console.error('YouTube Player Error:', event.data);
+  };
+
+  const closeVideoPopup = () => {
+    setShowVideoPopup(false);
+    setSelectedVideoId(null);
+  };
+
   if (loading && (!allCourses || allCourses.length === 0)) {
     return <Loading />;
   }
@@ -102,6 +153,62 @@ const CourseDetails = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-12">
+      {/* Video Popup Modal */}
+      {showVideoPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl mx-4 overflow-hidden shadow-2xl">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-xl font-semibold text-gray-800">Preview Video</h3>
+              <button 
+                onClick={closeVideoPopup}
+                className="text-gray-500 hover:text-gray-700 focus:outline-none"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="relative" style={{ paddingTop: '56.25%' }}>
+              <div className="absolute inset-0">
+                {selectedVideoId && (
+                  <YouTube
+                    videoId={selectedVideoId}
+                    opts={{
+                      width: '100%',
+                      height: '100%',
+                      playerVars: {
+                        autoplay: 0,
+                        modestbranding: 1,
+                        rel: 0,
+                        controls: 1,
+                        showinfo: 0,
+                        fs: 1,
+                        playsinline: 1,
+                        enablejsapi: 1,
+                        origin: window.location.origin,
+                        widgetid: Math.floor(Math.random() * 1000)
+                      }
+                    }}
+                    onError={(event) => {
+                      console.error('YouTube Player Error:', event.data);
+                    }}
+                    onReady={(event) => {
+                      console.log('Player Ready');
+                    }}
+                    className="absolute inset-0 w-full h-full"
+                  />
+                )}
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 border-t">
+              <p className="text-sm text-gray-600">
+                Click outside the video or press ESC to close
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-gray-900 text-white pt-8 pb-16">
         <div className="container mx-auto px-4 lg:px-8">
@@ -190,7 +297,17 @@ const CourseDetails = () => {
                               <span className="mr-3 text-gray-400">▶</span>
                               <span>
                                 {lecture.lectureTitle}
-                                {lecture.isPreviewFree && <span className="ml-2 text-xs text-blue-500 font-medium">[Preview]</span>}
+                                {lecture.isPreviewFree && (
+                                  <button
+                                    onClick={() => {
+                                      console.log('Preview clicked for lecture:', lecture);
+                                      handlePreviewClick(lecture);
+                                    }}
+                                    className="ml-2 text-xs text-blue-500 font-medium hover:text-blue-700"
+                                  >
+                                    [Preview]
+                                  </button>
+                                )}
                               </span>
                             </div>
                             <span className="text-sm text-gray-500">{formatDuration(lecture.lectureDuration)}</span>
@@ -229,6 +346,9 @@ const CourseDetails = () => {
                     No Image
                   </div>
                 )}
+
+                {playerData ? <iframe src={playerData.videoUrl} title="Course Video" className="w-full h-48 object-cover" /> : <img src={assets.time_left_clock_icon} alt="time left clock icon" />}
+                
                 {/* Sale tag if discount exists */}
                 {courseData.discount > 0 && (
                   <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded">

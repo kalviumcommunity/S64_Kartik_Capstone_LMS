@@ -1,8 +1,16 @@
-import { createContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { dummyCourses } from "../assets/assets";
 import { Navigate } from "react-router-dom";
 
 export const AppContext = createContext();
+
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within an AppProvider');
+  }
+  return context;
+};
 
 export const AppContextProvider = (props) => {
   const currency = import.meta.env.VITE_CURRENCY || "$";
@@ -11,6 +19,7 @@ export const AppContextProvider = (props) => {
   const [isEducator, setIsEducator] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
 
   const fetchAllCourses = async() => {
     try {
@@ -58,9 +67,51 @@ export const AppContextProvider = (props) => {
     return totalRating / course.courseRatings.length;
   };
 
+  const calculateCourseDuration = (course) => {
+    if (!course || !course.courseContent) return 'N/A';
+    
+    let totalMinutes = 0;
+    course.courseContent.forEach(chapter => {
+      chapter.chapterContent.forEach(lecture => {
+        totalMinutes += lecture.lectureDuration || 0;
+      });
+    });
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes}m`;
+  };
+
+  const calculateTotalLectures = (course) => {
+    if (!course || !course.courseContent) return 0;
+    let total = 0;
+    course.courseContent.forEach(chapter => {
+      total += chapter.chapterContent.length;
+    });
+    return total;
+  };
+
+  const calculateProgress = (course) => {
+    if (!course || !course.courseContent) return 0;
+    // For now, we'll return a dummy progress value
+    // In a real app, this would come from the user's progress data
+    return Math.floor(Math.random() * calculateTotalLectures(course));
+  };
+
+  const fetchUserEnrolledCourses = async() => {
+    // Add progress and totalLectures to each course
+    const coursesWithProgress = dummyCourses.map(course => ({
+      ...course,
+      progress: calculateProgress(course),
+      totalLectures: calculateTotalLectures(course)
+    }));
+    setEnrolledCourses(coursesWithProgress);
+  }
+
   useEffect(() => {
     fetchAllCourses();
     checkEducatorStatus();
+    fetchUserEnrolledCourses();
   }, []);
 
   const value = {
@@ -72,7 +123,10 @@ export const AppContextProvider = (props) => {
     calculateRating,
     isEducator,
     setIsEducator,
-    refreshCourses: fetchAllCourses
+    refreshCourses: fetchAllCourses,
+    enrolledCourses,
+    fetchUserEnrolledCourses,
+    calculateCourseDuration
   };
 
   return (

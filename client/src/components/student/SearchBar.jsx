@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { assets } from '../../assets/assets';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const SearchBar = () => {
   const navigate = useNavigate();
+  const { input: urlInput } = useParams(); // Get the input from URL if available
   const [input, setInput] = useState('');
+  
+  // Update input state when URL param changes
+  useEffect(() => {
+    if (urlInput) {
+      setInput(urlInput);
+    }
+  }, [urlInput]);
 
   const onSearchHandler = (e) => {
     e.preventDefault();
-    navigate('/courses-list/' + input);
+    if (input.trim()) {
+      navigate('/courses-list/' + encodeURIComponent(input.trim()));
+    }
   };
 
   return (
