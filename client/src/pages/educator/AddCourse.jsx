@@ -64,7 +64,7 @@ const AddCourse = () => {
           </div>
           <div className="flex items-center gap-2 mt-6">
             <span className="text-sm">Course Thumbnail</span>
-            {/* <button
+            <button
               type="button"
               className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded flex items-center"
               onClick={() => fileInputRef.current.click()}
@@ -72,7 +72,7 @@ const AddCourse = () => {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5v-9m-4.5 4.5h9" />
               </svg>
-            </button> */}
+            </button>
             <input
               type="file"
               accept="image/*"
