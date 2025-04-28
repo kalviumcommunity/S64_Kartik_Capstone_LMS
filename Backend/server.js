@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './configs/mongodb.js';
 import authRoutes from './routes/auth.js';
+import courseRoutes from './routes/courseRoutes.js';
 
 dotenv.config();
 connectDB(); // Connect to MongoDB
@@ -18,6 +19,7 @@ app.use(express.json());
 
 // Auth Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/courses', courseRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
