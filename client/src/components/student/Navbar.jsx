@@ -3,33 +3,67 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 import { assets } from "../../assets/assets";
 import { AppContext } from "../../context/AppContext";
+import * as jwt_decode from "jwt-decode";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isEducator } = useContext(AppContext);
   const isCourseListPage = location.pathname.includes("/courses-list");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    // Check if user is logged in
-    const user = localStorage.getItem("user");
-    setIsLoggedIn(!!user);
-  }, [location]); // Re-check when location changes
+    const checkToken = () => {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const decoded = jwt_decode.jwtDecode(token);
+          const currentTime = Date.now() / 1000;
+          if (decoded.exp && decoded.exp < currentTime) {
+            localStorage.removeItem("token");
+            setUser(null);
+          } else {
+            setUser(decoded);
+          }
+        } catch {
+          localStorage.removeItem("token");
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    };
 
-  const handleCreateAccount = () => {
-    navigate("/auth"); // Navigate to auth page for sign up
-  };
-
-  const handleLogin = () => {
-    navigate("/auth#login"); // Navigate to auth page for login
-  };
+    checkToken();
+    window.addEventListener('authChanged', checkToken);
+    return () => window.removeEventListener('authChanged', checkToken);
+  }, [location]);
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
+    localStorage.removeItem("token");
+    setUser(null);
+    setShowDropdown(false);
+    window.dispatchEvent(new Event('authChanged'));
     navigate("/");
   };
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  if (isLoading) {
+    return <div className="h-16 flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div
@@ -44,71 +78,153 @@ const Navbar = () => {
 
       <div className="hidden md:flex items-center gap-5 text-gray-500">
         <div className="flex items-center gap-5">
-          {isEducator ? (
-            <Link to="/educator/dashboard" className="hover:text-blue-600 transition">
-              Educator Dashboard
-            </Link>
+          {user ? (
+            <>
+              {user.role === "educator" ? (
+                <Link to="/educator/dashboard" className="hover:text-blue-600 transition">
+                  Educator Dashboard
+                </Link>
+              ) : (
+                <button
+                  onClick={() => navigate("/educator")}
+                  className="hover:text-blue-600 transition"
+                >
+                  Become Educator
+                </button>
+              )}
+              <Link to="/my-enrollments" className="hover:text-blue-600 transition">
+                My Enrollments
+              </Link>
+              {user.role === "educator" && (
+                <Link to="/educator/courses" className="hover:text-blue-600 transition">
+                  My Courses
+                </Link>
+              )}
+            </>
           ) : (
-            <button 
-              onClick={() => navigate("/educator")}
-              className="hover:text-blue-600 transition"
-            >
-              Become Educator
-            </button>
+            <Link to="/courses" className="hover:text-blue-600 transition">
+              Browse Courses
+            </Link>
           )}
-          |{" "}
-          <Link to="/my-enrollments" className="hover:text-blue-600 transition">
-            My Enrollments
-          </Link>
         </div>
 
-        {isLoggedIn ? (
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 text-white px-5 py-2 rounded-full hover:bg-red-700 transition duration-300"
-          >
-            Logout
-          </button>
+        {user ? (
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center gap-2 focus:outline-none"
+              >
+                <span className="text-gray-700">
+                  {user.name || user.email.split('@')[0]}
+                </span>
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                  {getInitials(user.name)}
+                </div>
+              </button>
+
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 border border-gray-200">
+                  <div className="px-4 py-2 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                  <Link
+                    to="/profile"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setShowDropdown(false)}
+                  >
+                    Profile Settings
+                  </Link>
+                  {user.role === "educator" && (
+                    <Link
+                      to="/educator/settings"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      Educator Settings
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleLogin}
+            <Link
+              to="/login"
               className="text-blue-600 hover:underline transition"
             >
               Login
-            </button>
-            <button
-              onClick={handleCreateAccount}
+            </Link>
+            <Link
+              to="/register"
               className="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition duration-300"
             >
-              Create Account
-            </button>
+              Register
+            </Link>
           </div>
         )}
       </div>
 
+      {/* Mobile Navigation */}
       <div className="md:hidden flex items-center gap-2 sm:gap-5 text-gray-500">
         <div className="flex items-center gap-1 sm:gap-2 max-sm:text-xs">
-          {isEducator ? (
-            <Link to="/educator/dashboard" className="hover:text-blue-600 transition">
-              Dashboard
-            </Link>
-          ) : (
-            <button 
-              onClick={() => navigate("/educator")}
-              className="hover:text-blue-600 transition"
-            >
-              Become Educator
-            </button>
-          )}
-          |{" "}
-          <Link to="/my-enrollments" className="hover:text-blue-600 transition">
-            My Enrollments
-          </Link>
+          {user ? (
+            <>
+              <div className="relative">
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="focus:outline-none"
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                    {getInitials(user.name)}
+                  </div>
+                </button>
 
-          <button onClick={isLoggedIn ? handleLogout : handleLogin}>
-            <img src={assets.user_icon} alt="User" />
-          </button>
+                {showDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200">
+                    <div className="px-3 py-2 border-b border-gray-100">
+                      <p className="text-xs font-medium text-gray-900">{user.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <Link
+                      to="/profile"
+                      className="block px-3 py-2 text-xs text-gray-700 hover:bg-gray-100"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      Profile Settings
+                    </Link>
+                    {user.role === "educator" && (
+                      <Link
+                        to="/educator/settings"
+                        className="block px-3 py-2 text-xs text-gray-700 hover:bg-gray-100"
+                        onClick={() => setShowDropdown(false)}
+                      >
+                        Educator Settings
+                      </Link>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-gray-100"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <Link to="/login">
+              <img src={assets.user_icon} alt="User" className="w-6 h-6" />
+            </Link>
+          )}
         </div>
       </div>
     </div>
