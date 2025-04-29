@@ -4,6 +4,7 @@ import SearchBar from "../../components/student/SearchBar";
 import { useNavigate, useParams } from "react-router-dom";
 import CourseCard from "../../components/student/CourseCard";
 import Footer from "../../components/student/Footer";
+import * as jwt_decode from "jwt-decode";
 
 const CoursesList = () => {
   const { allCourses } = useContext(AppContext);
@@ -11,6 +12,42 @@ const CoursesList = () => {
   const { input } = useParams(); // Get the 'input' parameter from the URL
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState(input || "");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const decoded = jwt_decode.jwtDecode(token);
+          const currentTime = Date.now() / 1000;
+          if (decoded.exp && decoded.exp < currentTime) {
+            localStorage.removeItem("token");
+            setIsAuthenticated(false);
+          } else {
+            setIsAuthenticated(true);
+          }
+        } catch {
+          localStorage.removeItem("token");
+          setIsAuthenticated(false);
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+      setIsLoading(false);
+    };
+
+    checkAuth();
+    window.addEventListener('authChanged', checkAuth);
+    return () => window.removeEventListener('authChanged', checkAuth);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Filter courses whenever allCourses or searchTerm changes
   useEffect(() => {
@@ -39,6 +76,21 @@ const CoursesList = () => {
   const handleSearch = (newSearchTerm) => {
     setSearchTerm(newSearchTerm);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // This will be followed by navigation to login page
+  }
 
   return (
     <>
