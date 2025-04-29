@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { dummyCourses } from "../assets/assets";
 import { Navigate } from "react-router-dom";
+import axios from 'axios';
 
 export const AppContext = createContext();
 
@@ -99,14 +100,32 @@ export const AppContextProvider = (props) => {
   };
 
   const fetchUserEnrolledCourses = async() => {
-    // Add progress and totalLectures to each course
-    const coursesWithProgress = dummyCourses.map(course => ({
-      ...course,
-      progress: calculateProgress(course),
-      totalLectures: calculateTotalLectures(course)
-    }));
-    setEnrolledCourses(coursesWithProgress);
-  }
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setEnrolledCourses([]);
+        return;
+      }
+
+      const response = await axios.get('http://localhost:5000/api/student/enrolled-courses', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Add progress and totalLectures to each course
+      const coursesWithProgress = response.data.map(course => ({
+        ...course,
+        progress: course.progress || 0,
+        totalLectures: course.totalLectures || calculateTotalLectures(course)
+      }));
+
+      setEnrolledCourses(coursesWithProgress);
+    } catch (error) {
+      console.error("Error fetching enrolled courses:", error);
+      setEnrolledCourses([]);
+    }
+  };
 
   useEffect(() => {
     fetchAllCourses();
@@ -125,6 +144,7 @@ export const AppContextProvider = (props) => {
     setIsEducator,
     refreshCourses: fetchAllCourses,
     enrolledCourses,
+    setEnrolledCourses,
     fetchUserEnrolledCourses,
     calculateCourseDuration
   };

@@ -1,12 +1,70 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 import { Line } from 'rc-progress';
 import YouTube from 'react-youtube';
+import * as jwt_decode from 'jwt-decode';
+import axios from 'axios';
 
 const MyEnrollments = () => {
-  const { enrolledCourses } = useContext(AppContext);
+  const { enrolledCourses, setEnrolledCourses } = useContext(AppContext);
   const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const decoded = jwt_decode.jwtDecode(token);
+          const currentTime = Date.now() / 1000;
+          if (decoded.exp && decoded.exp < currentTime) {
+            localStorage.removeItem("token");
+            setIsAuthenticated(false);
+          } else {
+            setIsAuthenticated(true);
+          }
+        } catch {
+          localStorage.removeItem("token");
+          setIsAuthenticated(false);
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+      setIsLoading(false);
+    };
+
+    checkAuth();
+    window.addEventListener('authChanged', checkAuth);
+    return () => window.removeEventListener('authChanged', checkAuth);
+  }, []);
+
+  useEffect(() => {
+    const fetchEnrolledCourses = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get('http://localhost:5000/api/student/enrolled-courses', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setEnrolledCourses(response.data);
+      } catch (error) {
+        console.error('Error fetching enrolled courses:', error);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchEnrolledCourses();
+    }
+  }, [isAuthenticated, setEnrolledCourses]);
+
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Calculate course duration from course content
   const calculateCourseDuration = (course) => {
@@ -30,9 +88,24 @@ const MyEnrollments = () => {
 
   // Calculate completion percentage
   const calculateProgress = (course) => {
-    if (!course.progress || !course.totalLectures) return 40;
+    if (!course.progress || !course.totalLectures) return 0;
     return (course.progress / course.totalLectures) * 100;
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-blue-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // This will be followed by navigation to login page
+  }
 
   return (
     <div className="container mx-auto px-2 sm:px-4 md:px-8 lg:px-16 py-4 sm:py-8 bg-gradient-to-b from-white to-blue-50 min-h-screen">
@@ -51,7 +124,7 @@ const MyEnrollments = () => {
             </p>
           </div>
           <button 
-            onClick={() => window.location.href = '/courses'} 
+            onClick={() => navigate('/courses-list')} 
             className="mt-3 sm:mt-4 md:mt-0 px-4 sm:px-6 py-2 sm:py-3 bg-white text-blue-600 font-bold rounded-lg sm:rounded-xl hover:bg-blue-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center text-sm sm:text-base"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -162,7 +235,7 @@ const MyEnrollments = () => {
               Start your learning journey by enrolling in courses that match your interests and career goals.
             </p>
             <button 
-              onClick={() => window.location.href = '/courses'}
+              onClick={() => navigate('/courses-list')}
               className="px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg sm:rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center text-sm sm:text-base"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

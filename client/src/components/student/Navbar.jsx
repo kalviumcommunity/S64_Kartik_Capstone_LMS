@@ -100,9 +100,12 @@ const Navbar = () => {
                   My Courses
                 </Link>
               )}
+              <Link to="/courses-list" className="hover:text-blue-600 transition">
+                Browse Courses
+              </Link>
             </>
           ) : (
-            <Link to="/courses" className="hover:text-blue-600 transition">
+            <Link to="/courses-list" className="hover:text-blue-600 transition">
               Browse Courses
             </Link>
           )}
