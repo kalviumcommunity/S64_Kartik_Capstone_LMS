@@ -7,6 +7,9 @@ import Footer from '../../components/student/Footer';
 import YouTube from 'react-youtube';
 import humanizeDuration from 'humanize-duration';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
 const CourseDetails = () => {
   const { id } = useParams(); // Get the course ID from the URL
   const [courseData, setCourseData] = useState(null);
@@ -16,6 +19,21 @@ const CourseDetails = () => {
   const [playerData, setPlayerData] = useState(null);
   const [showVideoPopup, setShowVideoPopup] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState(null);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    // Load Razorpay SDK
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchCourseData = () => {
@@ -119,6 +137,92 @@ const CourseDetails = () => {
   const closeVideoPopup = () => {
     setShowVideoPopup(false);
     setSelectedVideoId(null);
+  };
+
+  const handlePayment = async () => {
+    try {
+      setIsProcessing(true);
+      setError(null);
+
+      // Create order on your backend
+      const response = await fetch(`${API_BASE_URL}/api/payment/create-razorpay-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          courseId: id,
+          amount: discountedPrice * 100 // Razorpay expects amount in paise
+        })
+      });
+
+      const order = await response.json();
+
+      if (!order.id) {
+        throw new Error(order.message || 'Failed to create order');
+      }
+
+      const options = {
+        key: RAZORPAY_KEY,
+        amount: discountedPrice * 100,
+        currency: "INR",
+        name: "Learn Management System",
+        description: `Enrollment for ${courseData.courseTitle}`,
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            // Verify payment on your backend
+            const verifyResponse = await fetch(`${API_BASE_URL}/api/payment/verify-razorpay-payment`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: JSON.stringify({
+                orderCreationId: order.id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+                courseId: id
+              })
+            });
+
+            const result = await verifyResponse.json();
+            
+            if (result.success) {
+              setSuccess(true);
+              setError(null);
+            } else {
+              throw new Error(result.message || 'Payment verification failed');
+            }
+          } catch (err) {
+            setError('Payment verification failed. Please contact support.');
+            console.error('Payment verification error:', err);
+          }
+        },
+        prefill: {
+          name: localStorage.getItem('userName'),
+          email: localStorage.getItem('userEmail')
+        },
+        theme: {
+          color: "#3B82F6"
+        }
+      };
+
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.open();
+
+      razorpayInstance.on('payment.failed', function (response) {
+        setError(`Payment failed: ${response.error.description}`);
+      });
+
+    } catch (err) {
+      setError(err.message || 'Payment initialization failed');
+      console.error('Payment error:', err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (loading && (!allCourses || allCourses.length === 0)) {
@@ -347,7 +451,7 @@ const CourseDetails = () => {
                   </div>
                 )}
 
-                {playerData ? <iframe src={playerData.videoUrl} title="Course Video" className="w-full h-48 object-cover" /> : <img src={assets.time_left_clock_icon} alt="time left clock icon" />}
+                {playerData ? <iframe src={playerData.videoUrl} title="Course Video" className="w-full h-48 object-cover" /> : null}
                 
                 {/* Sale tag if discount exists */}
                 {courseData.discount > 0 && (
@@ -388,13 +492,35 @@ const CourseDetails = () => {
                 </div>
                 
                 {/* CTA Button */}
-                <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline transition-colors mb-3">
-                  Enroll Now
-                </button>
-                
-                <p className="text-sm text-center text-gray-600">
-                  30-Day Money-Back Guarantee
-                </p>
+                <div className="mb-3">
+                  <button
+                    onClick={handlePayment}
+                    disabled={isProcessing}
+                    className={`w-full py-3 px-4 ${
+                      isProcessing 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } text-white font-semibold rounded-lg shadow-sm transition-colors`}
+                  >
+                    {isProcessing ? 'Processing...' : `Pay ₹${discountedPrice.toFixed(2)}`}
+                  </button>
+
+                  {error && (
+                    <div className="text-red-500 text-sm text-center mt-3">
+                      {error}
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="text-green-500 text-sm text-center mt-3">
+                      Payment successful! You are now enrolled in the course.
+                    </div>
+                  )}
+
+                  <p className="text-sm text-center text-gray-600 mt-4">
+                    30-Day Money-Back Guarantee
+                  </p>
+                </div>
               </div>
             </div>
           </div>
