@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 
 const AuthForm = ({ isLogin }) => {
   const initialForm = isLogin 
@@ -11,6 +12,7 @@ const AuthForm = ({ isLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+  const { setUser, setIsEducator } = useAppContext();
 
   const validateForm = () => {
     const newErrors = {};
@@ -77,8 +79,16 @@ const AuthForm = ({ isLogin }) => {
         
         if (isLogin) {
           localStorage.setItem('token', data.token);
-          window.dispatchEvent(new Event('storage'));
-          navigate('/');
+          localStorage.setItem('user', JSON.stringify(data.user));
+          setUser(data.user);
+          setIsEducator(data.user.role === 'educator');
+          
+          // Redirect based on role
+          if (data.user.role === 'educator') {
+            navigate('/educator');
+          } else {
+            navigate('/');
+          }
         } else {
           setTimeout(() => navigate('/login'), 1500);
         }

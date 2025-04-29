@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Define the course schema
 const courseSchema = new mongoose.Schema({
@@ -13,4 +13,6 @@ const courseSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Create a model from the schema
-module.exports = mongoose.model('Course', courseSchema);
+const Course = mongoose.model('Course', courseSchema);
+
+export default Course;

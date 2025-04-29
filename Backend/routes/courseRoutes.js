@@ -1,13 +1,17 @@
 import express from 'express';
-import { addCourse, getCourses } from '../controllers/courseController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js';
+import { addCourse, getCourses} from '../controllers/courseController.js';
 
 const router = express.Router();
 
-// POST /api/courses - Add a new course (educator only)
-router.post('/', authMiddleware, addCourse);
+// Protected routes
+router.use(protect);
 
-// GET /api/courses - Get all courses
+// Course routes
+router.post('/', addCourse);
 router.get('/', getCourses);
+// router.get('/:id', getCourseById);
+// router.put('/:id', updateCourse);
+// router.delete('/:id', deleteCourse);
 
 export default router;

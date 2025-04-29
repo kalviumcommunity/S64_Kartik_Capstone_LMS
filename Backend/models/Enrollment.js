@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const enrollmentSchema = new mongoose.Schema({
   studentId: {
@@ -47,4 +47,5 @@ const enrollmentSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Enrollment', enrollmentSchema);
+const Enrollment = mongoose.model('Enrollment', enrollmentSchema);
+export default Enrollment;

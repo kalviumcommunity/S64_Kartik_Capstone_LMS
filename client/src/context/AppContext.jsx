@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { dummyCourses } from "../assets/assets";
-import { Navigate } from "react-router-dom";
+import { Navigate } from 'react-router-dom';
 import axios from 'axios';
+import { dummyCourses } from '../assets/assets';
+
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export const AppContext = createContext();
 
@@ -13,70 +16,81 @@ export const useAppContext = () => {
   return context;
 };
 
-export const AppContextProvider = (props) => {
-  const currency = import.meta.env.VITE_CURRENCY || "$";
+export const AppContextProvider = ({ children }) => {
+  const currency = import.meta.env.VITE_CURRENCY || '$';
 
   const [allCourses, setAllCourses] = useState([]);
   const [isEducator, setIsEducator] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [user, setUser] = useState(null);
 
-  const fetchAllCourses = async() => {
+  // Initialize auth state from localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (token && storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      setIsEducator(parsedUser.role === 'educator');
+      
+      // Set axios default header for authentication
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+    setLoading(false);
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsEducator(false);
+    delete axios.defaults.headers.common['Authorization'];
+    setEnrolledCourses([]);
+  };
+
+  const fetchAllCourses = async () => {
     try {
       setLoading(true);
-      // In a real app, this would be an API call
-      // const response = await fetch('/api/courses');
-      // const data = await response.json();
-      // setAllCourses(data);
+      setError(null);
       
       // Using dummy data for now
       setAllCourses(dummyCourses);
-      setLoading(false);
+      
+      // TODO: Replace with actual API call
+      // const response = await axios.get(`${API_BASE_URL}/api/courses`);
+      // setAllCourses(response.data);
+      
     } catch (err) {
-      console.error("Error fetching courses:", err);
-      setError("Failed to load courses. Please try again later.");
+      console.error('Error fetching courses:', err);
+      setError('Failed to load courses. Please try again later.');
+    } finally {
       setLoading(false);
     }
   };
 
-  // Check if user is an educator
   const checkEducatorStatus = () => {
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (user && user.role === "educator") {
-        setIsEducator(true);
-      } else {
-        setIsEducator(false);
-      }
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      setIsEducator(storedUser?.role === 'educator');
     } catch (err) {
-      console.error("Error checking educator status:", err);
+      console.error('Error checking educator status:', err);
       setIsEducator(false);
     }
   };
 
   const calculateRating = (course) => {
-    if (!course || !course.courseRatings || course.courseRatings.length === 0) {
-      return 0;
-    }
-    
-    let totalRating = 0;
-    course.courseRatings.forEach(rating => {
-      totalRating += rating.rating;
-    });
-    
-    return totalRating / course.courseRatings.length;
+    if (!course?.courseRatings?.length) return 0;
+    return course.courseRatings.reduce((acc, rating) => acc + rating.rating, 0) / course.courseRatings.length;
   };
 
   const calculateCourseDuration = (course) => {
-    if (!course || !course.courseContent) return 'N/A';
+    if (!course?.courseContent) return 'N/A';
     
-    let totalMinutes = 0;
-    course.courseContent.forEach(chapter => {
-      chapter.chapterContent.forEach(lecture => {
-        totalMinutes += lecture.lectureDuration || 0;
-      });
-    });
+    const totalMinutes = course.courseContent.reduce((acc, chapter) => 
+      acc + chapter.chapterContent.reduce((sum, lecture) => sum + (lecture.lectureDuration || 0), 0), 0);
     
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -84,36 +98,27 @@ export const AppContextProvider = (props) => {
   };
 
   const calculateTotalLectures = (course) => {
-    if (!course || !course.courseContent) return 0;
-    let total = 0;
-    course.courseContent.forEach(chapter => {
-      total += chapter.chapterContent.length;
-    });
-    return total;
+    if (!course?.courseContent) return 0;
+    return course.courseContent.reduce((acc, chapter) => acc + chapter.chapterContent.length, 0);
   };
 
   const calculateProgress = (course) => {
-    if (!course || !course.courseContent) return 0;
-    // For now, we'll return a dummy progress value
-    // In a real app, this would come from the user's progress data
+    if (!course?.courseContent) return 0;
     return Math.floor(Math.random() * calculateTotalLectures(course));
   };
 
-  const fetchUserEnrolledCourses = async() => {
+  const fetchUserEnrolledCourses = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem('token');
       if (!token) {
         setEnrolledCourses([]);
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/api/student/enrolled-courses', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const response = await axios.get(`${API_BASE_URL}/api/student/enrolled-courses`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Add progress and totalLectures to each course
       const coursesWithProgress = response.data.map(course => ({
         ...course,
         progress: course.progress || 0,
@@ -122,7 +127,7 @@ export const AppContextProvider = (props) => {
 
       setEnrolledCourses(coursesWithProgress);
     } catch (error) {
-      console.error("Error fetching enrolled courses:", error);
+      console.error('Error fetching enrolled courses:', error);
       setEnrolledCourses([]);
     }
   };
@@ -130,8 +135,10 @@ export const AppContextProvider = (props) => {
   useEffect(() => {
     fetchAllCourses();
     checkEducatorStatus();
-    fetchUserEnrolledCourses();
-  }, []);
+    if (user) {
+      fetchUserEnrolledCourses();
+    }
+  }, [user]);
 
   const value = {
     currency,
@@ -146,12 +153,15 @@ export const AppContextProvider = (props) => {
     enrolledCourses,
     setEnrolledCourses,
     fetchUserEnrolledCourses,
-    calculateCourseDuration
+    calculateCourseDuration,
+    user,
+    setUser,
+    logout
   };
 
   return (
     <AppContext.Provider value={value}>
-      {props.children}
+      {children}
     </AppContext.Provider>
   );
 };
