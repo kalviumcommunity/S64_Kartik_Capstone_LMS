@@ -1,32 +1,80 @@
 import Course from '../models/Course.js';
+import asyncHandler from 'express-async-handler';
 
-export const addCourse = async (req, res) => {
-  try {
-    const { title, description, price, thumbnail, status } = req.body;
-    const educator = req.user._id; // assuming you use auth middleware
+// Create a new course
+export const addCourse = asyncHandler(async (req, res) => {
+  const { title, description, price, thumbnail, status } = req.body;
+  const educator = req.user._id;
 
-    const newCourse = new Course({
-      title,
-      description,
-      price,
-      thumbnail,
-      status,
-      educator
-    });
+  const course = await Course.create({
+    title,
+    description,
+    price,
+    thumbnail,
+    status,
+    educator
+  });
 
-    await newCourse.save();
-    res.status(201).json({ message: 'Course created successfully', course: newCourse });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to create course', error: error.message });
-  }
-};
+  res.status(201).json(course);
+});
 
 // Get all courses
-export const getCourses = async (req, res) => {
-  try {
-    const courses = await Course.find();
-    res.status(200).json(courses);
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch courses', error: error.message });
+export const getCourses = asyncHandler(async (req, res) => {
+  const courses = await Course.find().populate('educator', 'name email');
+  res.json(courses);
+});
+
+// Get course by ID
+export const getCourseById = asyncHandler(async (req, res) => {
+  const course = await Course.findById(req.params.id).populate('educator', 'name email');
+  
+  if (!course) {
+    res.status(404);
+    throw new Error('Course not found');
   }
-};
+
+  res.json(course);
+});
+
+// Update course
+export const updateCourse = asyncHandler(async (req, res) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course) {
+    res.status(404);
+    throw new Error('Course not found');
+  }
+
+  // Check if user is the educator
+  if (course.educator.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to update this course');
+  }
+
+  const updatedCourse = await Course.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    { new: true }
+  );
+
+  res.json(updatedCourse);
+});
+
+// Delete course
+export const deleteCourse = asyncHandler(async (req, res) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course) {
+    res.status(404);
+    throw new Error('Course not found');
+  }
+
+  // Check if user is the educator
+  if (course.educator.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to delete this course');
+  }
+
+  await course.deleteOne();
+  res.json({ message: 'Course removed' });
+});

@@ -3,68 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 import { Line } from 'rc-progress';
 import YouTube from 'react-youtube';
-import * as jwt_decode from 'jwt-decode';
 import axios from 'axios';
 
 const MyEnrollments = () => {
-  const { enrolledCourses, setEnrolledCourses } = useContext(AppContext);
+  const { enrolledCourses, setEnrolledCourses, user } = useContext(AppContext);
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decoded = jwt_decode.jwtDecode(token);
-          const currentTime = Date.now() / 1000;
-          if (decoded.exp && decoded.exp < currentTime) {
-            localStorage.removeItem("token");
-            setIsAuthenticated(false);
-          } else {
-            setIsAuthenticated(true);
-          }
-        } catch {
-          localStorage.removeItem("token");
-          setIsAuthenticated(false);
-        }
-      } else {
-        setIsAuthenticated(false);
-      }
-      setIsLoading(false);
-    };
-
-    checkAuth();
-    window.addEventListener('authChanged', checkAuth);
-    return () => window.removeEventListener('authChanged', checkAuth);
-  }, []);
 
   useEffect(() => {
     const fetchEnrolledCourses = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get('http://localhost:5000/api/student/enrolled-courses', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axios.get('http://localhost:5000/api/student/enrolled-courses');
         setEnrolledCourses(response.data);
       } catch (error) {
         console.error('Error fetching enrolled courses:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (isAuthenticated) {
-      fetchEnrolledCourses();
-    }
-  }, [isAuthenticated, setEnrolledCourses]);
-
-  useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      navigate("/login");
-    }
-  }, [isAuthenticated, isLoading, navigate]);
+    fetchEnrolledCourses();
+  }, [setEnrolledCourses]);
 
   // Calculate course duration from course content
   const calculateCourseDuration = (course) => {
@@ -101,10 +60,6 @@ const MyEnrollments = () => {
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null; // This will be followed by navigation to login page
   }
 
   return (
