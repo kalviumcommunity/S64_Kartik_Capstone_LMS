@@ -14,7 +14,11 @@ const protect = (req, res, next) => {
   try {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    // Set user object with _id instead of id
+    req.user = {
+      ...decoded,
+      _id: decoded.id // Map id to _id for MongoDB compatibility
+    };
     next();
   } catch (error) {
     res.status(401).json({ message: 'Invalid token' });
