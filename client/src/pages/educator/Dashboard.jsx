@@ -8,9 +8,9 @@ const Dashboard = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [totalEnrollments, setTotalEnrollments] = useState(0);
 
   // Static values for now
-  const totalEnrollments = 14;
   const totalEarnings = 245;
 
   useEffect(() => {
@@ -21,12 +21,25 @@ const Dashboard = () => {
           throw new Error('No authentication token found');
         }
 
-        const response = await axios.get('http://localhost:5000/api/courses', {
-          headers: { Authorization: `Bearer ${token}` }
+        console.log('Fetching courses...');
+        const response = await axios.get('http://localhost:5000/api/courses/educator', {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
+
+        console.log('Response data:', response.data);
 
         if (Array.isArray(response.data)) {
           setCourses(response.data);
+          // Calculate total enrollments
+          const total = response.data.reduce((sum, course) => {
+            console.log('Course:', course.courseTitle, 'Enrolled Students:', course.enrolledStudents);
+            return sum + (course.enrolledStudents?.length || 0);
+          }, 0);
+          console.log('Total enrollments:', total);
+          setTotalEnrollments(total);
         } else {
           console.error('Expected array of courses but got:', response.data);
           setCourses([]);
@@ -48,7 +61,7 @@ const Dashboard = () => {
 
   return (
     <div className="flex">
-
+      <Sidebar />
       <div className="flex-1">
         <NavBar />
         <div className="p-6">
@@ -71,7 +84,7 @@ const Dashboard = () => {
             <div className="flex-1 flex items-center gap-4 bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
               <img src={assets.earning_icon} alt="icon" className="w-10 h-10" />
               <div>
-                <div className="text-2xl font-bold text-gray-800">${totalEarnings}</div>
+                <div className="text-2xl font-bold text-gray-800">${courses.reduce((sum, course) => sum + (course.coursePrice * (course.enrolledStudents?.length || 0)), 0)}</div>
                 <div className="text-gray-500 text-sm">Total Earnings</div>
               </div>
             </div>
@@ -86,6 +99,7 @@ const Dashboard = () => {
                   <tr className="bg-gray-50 text-gray-600">
                     <th className="py-2 px-4 text-left font-medium">Title</th>
                     <th className="py-2 px-4 text-left font-medium">Price</th>
+                    <th className="py-2 px-4 text-left font-medium">Enrollments</th>
                     <th className="py-2 px-4 text-left font-medium">Status</th>
                   </tr>
                 </thead>
@@ -94,6 +108,7 @@ const Dashboard = () => {
                     <tr key={course._id} className="border-b last:border-b-0">
                       <td className="py-2 px-4">{course.courseTitle}</td>
                       <td className="py-2 px-4">${course.coursePrice}</td>
+                      <td className="py-2 px-4">{course.enrolledStudents?.length || 0}</td>
                       <td className="py-2 px-4">{course.isPublished ? 'Published' : 'Draft'}</td>
                     </tr>
                   ))}

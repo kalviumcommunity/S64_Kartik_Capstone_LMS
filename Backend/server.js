@@ -9,6 +9,8 @@ import './config/passport.js';  // Import passport config
 import authRoutes from './routes/auth.js';
 import courseRoutes from './routes/courseRoutes.js';
 import enrollmentRoutes from './routes/enrollment.js';
+import studentRoutes from './routes/student.js';
+import mongoose from 'mongoose';
 
 dotenv.config();
 connectDB(); // Connect to MongoDB
@@ -25,6 +27,12 @@ app.use(passport.initialize());
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/student', studentRoutes);
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
