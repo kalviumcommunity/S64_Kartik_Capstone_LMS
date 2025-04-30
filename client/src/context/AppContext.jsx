@@ -6,6 +6,42 @@ import { dummyCourses } from '../assets/assets';
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Add request interceptor to add token to all requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear auth data and redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const AppContext = createContext();
 
 export const useAppContext = () => {
@@ -28,18 +64,31 @@ export const AppContextProvider = ({ children }) => {
 
   // Initialize auth state from localStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setIsEducator(parsedUser.role === 'educator');
-      
-      // Set axios default header for authentication
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
-    setLoading(false);
+    const initializeAuth = () => {
+      try {
+        const token = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
+        
+        if (token && storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setIsEducator(parsedUser.role === 'educator');
+        } else {
+          setUser(null);
+          setIsEducator(false);
+        }
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        setIsEducator(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const logout = () => {
@@ -47,8 +96,8 @@ export const AppContextProvider = ({ children }) => {
     localStorage.removeItem('user');
     setUser(null);
     setIsEducator(false);
-    delete axios.defaults.headers.common['Authorization'];
     setEnrolledCourses([]);
+    window.location.href = '/login';
   };
 
   const fetchAllCourses = async () => {
@@ -56,15 +105,8 @@ export const AppContextProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/api/courses`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.get('/api/courses');
+      
       if (Array.isArray(response.data)) {
         setAllCourses(response.data);
       } else {
@@ -111,22 +153,9 @@ export const AppContextProvider = ({ children }) => {
     return course.courseContent.reduce((acc, chapter) => acc + chapter.chapterContent.length, 0);
   };
 
-  const calculateProgress = (course) => {
-    if (!course?.courseContent) return 0;
-    return Math.floor(Math.random() * calculateTotalLectures(course));
-  };
-
   const fetchUserEnrolledCourses = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setEnrolledCourses([]);
-        return;
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/api/enrollments/student/enrolled-courses`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/api/enrollments/student/enrolled-courses');
 
       if (Array.isArray(response.data)) {
         const coursesWithProgress = response.data.map(enrollment => ({
@@ -146,9 +175,9 @@ export const AppContextProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    fetchAllCourses();
-    checkEducatorStatus();
     if (user) {
+      fetchAllCourses();
+      checkEducatorStatus();
       fetchUserEnrolledCourses();
     }
   }, [user]);

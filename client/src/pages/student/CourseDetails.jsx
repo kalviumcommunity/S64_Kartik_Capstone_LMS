@@ -329,7 +329,7 @@ const CourseDetails = () => {
               </div>
               
               <p className="text-sm">
-                {courseData.educator && <span>Course by <a href="#" className="text-blue-400 hover:underline">Instructor ID: {courseData.educator}</a></span>}
+                {courseData.educator && <span>Course by <a href="#" className="text-blue-400 hover:underline">{courseData.educator.name || 'Unknown Educator'}</a></span>}
               </p>
             </div>
           </div>
@@ -465,7 +465,7 @@ const CourseDetails = () => {
               <div className="p-6">
                 <div className="mb-4">
                   <div className="flex items-center">
-                    <span className="text-3xl font-bold">₹{discountedPrice.toFixed(2)}</span>
+                    <span className="text-3xl font-bold">₹{(discountedPrice || 0).toFixed(2)}</span>
                     {courseData.discount > 0 && (
                       <span className="ml-3 line-through text-gray-500">₹{courseData.coursePrice.toFixed(2)}</span>
                     )}
@@ -502,7 +502,7 @@ const CourseDetails = () => {
                         : 'bg-blue-600 hover:bg-blue-700'
                     } text-white font-semibold rounded-lg shadow-sm transition-colors`}
                   >
-                    {isProcessing ? 'Processing...' : `Pay ₹${discountedPrice.toFixed(2)}`}
+                    {isProcessing ? 'Processing...' : `Pay ₹${(discountedPrice || 0).toFixed(2)}`}
                   </button>
 
                   {error && (

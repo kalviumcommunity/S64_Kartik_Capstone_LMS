@@ -1,19 +1,20 @@
-import React, { useContext, useEffect, useState } from "react";
-import { AppContext } from "../../context/AppContext";
+import React, { useEffect, useState } from "react";
 import SearchBar from "../../components/student/SearchBar";
 import { useNavigate, useParams } from "react-router-dom";
 import CourseCard from "../../components/student/CourseCard";
 import Footer from "../../components/student/Footer";
 import * as jwt_decode from "jwt-decode";
+import axios from "axios";
 
 const CoursesList = () => {
-  const { allCourses } = useContext(AppContext);
   const navigate = useNavigate();
-  const { input } = useParams(); // Get the 'input' parameter from the URL
+  const { input } = useParams();
+  const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState(input || "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -49,10 +50,33 @@ const CoursesList = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  // Filter courses whenever allCourses or searchTerm changes
+  // Fetch courses from API
   useEffect(() => {
-    if (allCourses && allCourses.length > 0) {
-      const tempCourses = allCourses.slice();
+    const fetchCourses = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/courses", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setCourses(response.data);
+        setError(null);
+      } catch (err) {
+        setError("Failed to fetch courses. Please try again later.");
+        console.error("Error fetching courses:", err);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchCourses();
+    }
+  }, [isAuthenticated]);
+
+  // Filter courses whenever courses or searchTerm changes
+  useEffect(() => {
+    if (courses && courses.length > 0) {
+      const tempCourses = courses.slice();
       
       if (searchTerm) {
         setFilteredCourses(
@@ -64,7 +88,7 @@ const CoursesList = () => {
         setFilteredCourses(tempCourses);
       }
     }
-  }, [allCourses, searchTerm]); // Add dependencies to ensure effect runs when these change
+  }, [courses, searchTerm]);
 
   // Set initial search term from URL parameter
   useEffect(() => {
@@ -89,7 +113,23 @@ const CoursesList = () => {
   }
 
   if (!isAuthenticated) {
-    return null; // This will be followed by navigation to login page
+    return null;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-50">
+        <div className="text-center bg-white p-8 rounded-lg shadow-md">
+          <p className="text-red-600 text-lg mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -128,7 +168,7 @@ const CoursesList = () => {
         {filteredCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
             {filteredCourses.map((course, index) => (
-              <CourseCard key={course.id || index} course={course} />
+              <CourseCard key={course._id || index} course={course} />
             ))}
           </div>
         ) : (
