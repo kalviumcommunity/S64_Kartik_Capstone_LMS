@@ -43,7 +43,7 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
 
-        {/* Protected Routes */}
+        {/* Protected Student Routes */}
         <Route path="/my-enrollments" element={
           <ProtectedRoute>
             <MyEnrollments />
@@ -55,19 +55,37 @@ const App = () => {
           </ProtectedRoute>
         } />
 
-        {/* Educator Routes */}
+        {/* Protected Educator Routes */}
         <Route path="/educator" element={
           <ProtectedRoute requireEducator>
             <Educator />
           </ProtectedRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="add-course" element={<AddCourse />} />
-          <Route path="my-courses" element={<MyCourses />} />
-          <Route path="student-enrolled" element={<StudentsEnrolled />} />
-        </Route>
-
-        <Route path="/loading/:path" element={<Loading />} />
+        } />
+        <Route path="/educator/dashboard" element={
+          <ProtectedRoute requireEducator>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/educator/add-course" element={
+          <ProtectedRoute requireEducator>
+            <AddCourse />
+          </ProtectedRoute>
+        } />
+        <Route path="/educator/my-courses" element={
+          <ProtectedRoute requireEducator>
+            <MyCourses />
+          </ProtectedRoute>
+        } />
+        <Route path="/educator/student-enrolled" element={
+          <ProtectedRoute requireEducator>
+            <StudentsEnrolled />
+          </ProtectedRoute>
+        } />
+        <Route path="/educator/courses/:courseId/students" element={
+          <ProtectedRoute requireEducator>
+            <StudentsEnrolled />
+          </ProtectedRoute>
+        } />
       </Routes>
     </div>
   );

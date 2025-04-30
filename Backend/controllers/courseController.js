@@ -172,11 +172,15 @@ export const addCourseRating = asyncHandler(async (req, res) => {
 
 // Get educator's courses
 export const getEducatorCourses = asyncHandler(async (req, res) => {
-  const courses = await Course.find({ educator: req.user._id })
-    .select('courseTitle courseThumbnail coursePrice educator courseRatings isPublished')
-    .populate('educator', 'name email')
-    .populate('courseRatings.student', 'name');
+  console.log('Getting educator courses for user:', req.user._id);
   
+  const courses = await Course.find({ educator: req.user._id })
+    .select('courseTitle courseThumbnail coursePrice educator courseRatings isPublished enrolledStudents')
+    .populate('educator', 'name email')
+    .populate('courseRatings.student', 'name')
+    .populate('enrolledStudents', 'name email');
+  
+  console.log('Found courses:', courses);
   res.json(courses);
 });
 

@@ -19,17 +19,12 @@ const MyEnrollments = () => {
           throw new Error('No authentication token found');
         }
 
-        const response = await axios.get('http://localhost:5000/api/enrollments/student/enrolled-courses', {
+        const response = await axios.get('/api/student/enrolled-courses', {
           headers: { Authorization: `Bearer ${token}` }
         });
 
         if (Array.isArray(response.data)) {
-          const coursesWithProgress = response.data.map(enrollment => ({
-            ...enrollment.courseId,
-            progress: enrollment.progress.length || 0,
-            totalLectures: calculateTotalLectures(enrollment.courseId)
-          }));
-          setEnrolledCourses(coursesWithProgress);
+          setEnrolledCourses(response.data);
         } else {
           console.error('Expected array of enrolled courses but got:', response.data);
           setEnrolledCourses([]);
@@ -48,13 +43,19 @@ const MyEnrollments = () => {
 
   // Calculate course duration from course content
   const calculateCourseDuration = (course) => {
-    if (!course || !course.courseContent) return "N/A";
+    if (!course?.courseContent || !Array.isArray(course.courseContent)) {
+      return "N/A";
+    }
 
     let totalMinutes = 0;
     course.courseContent.forEach(chapter => {
-      chapter.chapterContent.forEach(lecture => {
-        totalMinutes += lecture.lectureDuration || 0;
-      });
+      if (chapter?.chapterContent && Array.isArray(chapter.chapterContent)) {
+        chapter.chapterContent.forEach(lecture => {
+          if (typeof lecture?.lectureDuration === 'number') {
+            totalMinutes += lecture.lectureDuration;
+          }
+        });
+      }
     });
 
     const hours = Math.floor(totalMinutes / 60);
@@ -68,7 +69,7 @@ const MyEnrollments = () => {
 
   // Calculate completion percentage
   const calculateProgress = (course) => {
-    if (!course.progress || !course.totalLectures) return 0;
+    if (!course?.progress || !course?.totalLectures) return 0;
     return (course.progress / course.totalLectures) * 100;
   };
 

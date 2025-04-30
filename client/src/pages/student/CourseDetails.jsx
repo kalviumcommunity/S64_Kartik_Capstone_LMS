@@ -1,19 +1,21 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 import Loading from '../../components/student/Loading';
 import { assets } from '../../assets/assets';
 import Footer from '../../components/student/Footer';
 import YouTube from 'react-youtube';
 import humanizeDuration from 'humanize-duration';
+import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
 const CourseDetails = () => {
-  const { id } = useParams(); // Get the course ID from the URL
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [courseData, setCourseData] = useState(null);
-  const { allCourses } = useContext(AppContext); // Get all courses from context
+  const { allCourses, user } = useContext(AppContext);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState({});
   const [playerData, setPlayerData] = useState(null);
@@ -22,6 +24,7 @@ const CourseDetails = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
 
   useEffect(() => {
     // Load Razorpay SDK
@@ -56,6 +59,11 @@ const CourseDetails = () => {
           });
           setExpandedSections(initialExpandState);
         }
+
+        // Check if user is enrolled
+        if (user && findCourse?.enrolledStudents?.includes(user._id)) {
+          setIsEnrolled(true);
+        }
       } catch (error) {
         console.error("Error fetching course data:", error);
       } finally {
@@ -67,7 +75,7 @@ const CourseDetails = () => {
     if (allCourses && allCourses.length > 0) {
       fetchCourseData();
     }
-  }, [id, allCourses]); // Re-run when id or allCourses changes
+  }, [id, allCourses, user]); // Re-run when id or allCourses changes
 
   const toggleSection = (sectionId) => {
     setExpandedSections(prev => ({
@@ -139,87 +147,31 @@ const CourseDetails = () => {
     setSelectedVideoId(null);
   };
 
-  const handlePayment = async () => {
+  const handleEnroll = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setError(null);
 
-      // Create order on your backend
-      const response = await fetch(`${API_BASE_URL}/api/payment/create-razorpay-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          courseId: id,
-          amount: discountedPrice * 100 // Razorpay expects amount in paise
-        })
-      });
-
-      const order = await response.json();
-
-      if (!order.id) {
-        throw new Error(order.message || 'Failed to create order');
-      }
-
-      const options = {
-        key: RAZORPAY_KEY,
-        amount: discountedPrice * 100,
-        currency: "INR",
-        name: "Learn Management System",
-        description: `Enrollment for ${courseData.courseTitle}`,
-        order_id: order.id,
-        handler: async function (response) {
-          try {
-            // Verify payment on your backend
-            const verifyResponse = await fetch(`${API_BASE_URL}/api/payment/verify-razorpay-payment`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              },
-              body: JSON.stringify({
-                orderCreationId: order.id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpaySignature: response.razorpay_signature,
-                courseId: id
-              })
-            });
-
-            const result = await verifyResponse.json();
-            
-            if (result.success) {
-              setSuccess(true);
-              setError(null);
-            } else {
-              throw new Error(result.message || 'Payment verification failed');
-            }
-          } catch (err) {
-            setError('Payment verification failed. Please contact support.');
-            console.error('Payment verification error:', err);
-          }
-        },
-        prefill: {
-          name: localStorage.getItem('userName'),
-          email: localStorage.getItem('userEmail')
-        },
-        theme: {
-          color: "#3B82F6"
+      const response = await axios.post(
+        `/api/enrollments/student/enroll/${id}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }
-      };
+      );
 
-      const razorpayInstance = new window.Razorpay(options);
-      razorpayInstance.open();
-
-      razorpayInstance.on('payment.failed', function (response) {
-        setError(`Payment failed: ${response.error.description}`);
-      });
-
+      if (response.data) {
+        setSuccess(true);
+        setIsEnrolled(true);
+        setError(null);
+      }
     } catch (err) {
-      setError(err.message || 'Payment initialization failed');
-      console.error('Payment error:', err);
+      setError(err.response?.data?.message || 'Failed to enroll in course');
     } finally {
       setIsProcessing(false);
     }
@@ -493,17 +445,26 @@ const CourseDetails = () => {
                 
                 {/* CTA Button */}
                 <div className="mb-3">
-                  <button
-                    onClick={handlePayment}
-                    disabled={isProcessing}
-                    className={`w-full py-3 px-4 ${
-                      isProcessing 
-                        ? 'bg-gray-400 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    } text-white font-semibold rounded-lg shadow-sm transition-colors`}
-                  >
-                    {isProcessing ? 'Processing...' : `Pay ₹${(discountedPrice || 0).toFixed(2)}`}
-                  </button>
+                  {isEnrolled ? (
+                    <button
+                      onClick={() => navigate(`/course/${id}/learn`)}
+                      className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-sm transition-colors"
+                    >
+                      Continue Learning
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleEnroll}
+                      disabled={isProcessing}
+                      className={`w-full py-3 px-4 ${
+                        isProcessing 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white font-semibold rounded-lg shadow-sm transition-colors`}
+                    >
+                      {isProcessing ? 'Processing...' : 'Enroll Now'}
+                    </button>
+                  )}
 
                   {error && (
                     <div className="text-red-500 text-sm text-center mt-3">
@@ -513,13 +474,9 @@ const CourseDetails = () => {
 
                   {success && (
                     <div className="text-green-500 text-sm text-center mt-3">
-                      Payment successful! You are now enrolled in the course.
+                      Successfully enrolled in the course!
                     </div>
                   )}
-
-                  <p className="text-sm text-center text-gray-600 mt-4">
-                    30-Day Money-Back Guarantee
-                  </p>
                 </div>
               </div>
             </div>

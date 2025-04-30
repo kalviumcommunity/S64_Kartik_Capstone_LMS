@@ -16,6 +16,7 @@ const VideoPlayer = () => {
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState({});
   const [currentLecture, setCurrentLecture] = useState({ chapterIndex: 0, lectureIndex: 0 });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (allCourses && courseId) {
@@ -35,15 +36,15 @@ const VideoPlayer = () => {
           const firstChapter = course.courseContent[0];
           if (firstChapter.chapterContent && firstChapter.chapterContent.length > 0) {
             const firstLecture = firstChapter.chapterContent[0];
-            if (firstLecture.lectureUrl) {
-              const videoId = extractYouTubeId(firstLecture.lectureUrl);
+            if (firstLecture.videoUrl) {
+              const videoId = extractYouTubeId(firstLecture.videoUrl);
               if (videoId) {
                 setPlayerData({
                   videoId,
                   chapter: 1,
                   lecture: 1,
                   lectureTitle: firstLecture.lectureTitle,
-                  lectureUrl: firstLecture.lectureUrl
+                  lectureUrl: firstLecture.videoUrl
                 });
                 setCurrentLecture({ chapterIndex: 0, lectureIndex: 0 });
               }
@@ -64,17 +65,32 @@ const VideoPlayer = () => {
 
   const extractYouTubeId = (url) => {
     if (!url) return null;
+    
+    // Handle different YouTube URL formats
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
+    
+    // If no match found, try to extract ID directly (in case it's just the ID)
+    if (!match) {
+      // Check if it's just an 11-character video ID
+      if (url.length === 11) {
+        return url;
+      }
+      return null;
+    }
+    
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
   const onPlayerError = (event) => {
     console.error('YouTube Player Error:', event.data);
+    // Add user-friendly error message
+    setError('Failed to load video. Please check if the video URL is valid.');
   };
 
   const onPlayerReady = (event) => {
     console.log('Player Ready');
+    setError(null);
   };
 
   const formatDuration = (minutes) => {
@@ -91,13 +107,13 @@ const VideoPlayer = () => {
   const handleWatch = (chapterIdx, lectureIdx) => {
     const chapter = courseData.courseContent[chapterIdx];
     const lecture = chapter.chapterContent[lectureIdx];
-    const videoId = extractYouTubeId(lecture.lectureUrl);
+    const videoId = extractYouTubeId(lecture.videoUrl);
     setPlayerData({
       videoId,
       chapter: chapterIdx + 1,
       lecture: lectureIdx + 1,
       lectureTitle: lecture.lectureTitle,
-      lectureUrl: lecture.lectureUrl
+      lectureUrl: lecture.videoUrl
     });
     setCurrentLecture({ chapterIndex: chapterIdx, lectureIndex: lectureIdx });
   };
@@ -118,28 +134,38 @@ const VideoPlayer = () => {
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               {playerData ? (
-                <YouTube 
-                  videoId={playerData.videoId} 
-                  opts={{
-                    width: '100%',
-                    height: '100%',
-                    playerVars: { 
-                      autoplay: 0,
-                      modestbranding: 1,
-                      rel: 0,
-                      controls: 1,
-                      showinfo: 0,
-                      fs: 1,
-                      playsinline: 1,
-                      enablejsapi: 1,
-                      origin: window.location.origin,
-                      widgetid: Math.floor(Math.random() * 1000)
-                    }
-                  }} 
-                  onError={onPlayerError}
-                  onReady={onPlayerReady}
-                  iframeClassName="w-full aspect-video"
-                />
+                <div className="relative">
+                  <YouTube 
+                    videoId={playerData.videoId} 
+                    opts={{
+                      width: '100%',
+                      height: '100%',
+                      playerVars: { 
+                        autoplay: 0,
+                        modestbranding: 1,
+                        rel: 0,
+                        controls: 1,
+                        showinfo: 0,
+                        fs: 1,
+                        playsinline: 1,
+                        enablejsapi: 1,
+                        origin: window.location.origin,
+                        widgetid: Math.floor(Math.random() * 1000)
+                      }
+                    }} 
+                    onError={onPlayerError}
+                    onReady={onPlayerReady}
+                    iframeClassName="w-full aspect-video"
+                  />
+                  {error && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75">
+                      <div className="text-white text-center p-4">
+                        <p className="text-lg font-semibold mb-2">Error Loading Video</p>
+                        <p className="text-sm">{error}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex items-center justify-center bg-gray-800 w-full aspect-video">
                   <img 

@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
   }},
   googleId: { type: String },
   avatar: { type: String },
-  role: { type: String, enum: ['student', 'educator'], default: 'student' }
+  role: { type: String, enum: ['student', 'educator'], default: 'student' },
+  enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }]
 }, { timestamps: true });
 
 // Method to generate JWT token
