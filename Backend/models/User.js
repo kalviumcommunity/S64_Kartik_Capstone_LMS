@@ -1,11 +1,29 @@
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 
 const userSchema = new mongoose.Schema({
-  name: String,
+  name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: { type: String, required: function() {
+    return !this.googleId; // Password is required only if googleId is not present
+  }},
+  googleId: { type: String },
+  avatar: { type: String },
   role: { type: String, enum: ['student', 'educator'], default: 'student' }
 }, { timestamps: true });
+
+// Method to generate JWT token
+userSchema.methods.generateAuthToken = function() {
+  return jwt.sign(
+    { 
+      id: this._id,
+      email: this.email,
+      role: this.role 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+};
 
 const User = mongoose.model('User', userSchema);
 export default User;

@@ -1,7 +1,7 @@
 import Course from '../models/Course.js';
 import asyncHandler from 'express-async-handler';
 import Enrollment from '../models/Enrollment.js';
-import paypal from '../config/paypal.js';
+
 
 // Create a new course
 export const addCourse = asyncHandler(async (req, res) => {
