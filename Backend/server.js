@@ -3,7 +3,9 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import passport from 'passport';
 import connectDB from './configs/mongodb.js';
+import './config/passport.js';  // Import passport config
 import authRoutes from './routes/auth.js';
 import courseRoutes from './routes/courseRoutes.js';
 import enrollmentRoutes from './routes/enrollment.js';
@@ -17,6 +19,7 @@ const PORT = process.env.PORT || 5000;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 
 // Routes
 app.use('/api/auth', authRoutes);
