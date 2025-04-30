@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react'
 import NavBar from '../../components/educator/NavBar'
 import Sidebar from '../../components/educator/Sidebar'
 import { assets } from '../../assets/assets'
+import axios from 'axios'
 
 const Dashboard = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Static values for now
   const totalEnrollments = 14;
@@ -13,21 +15,42 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchCourses = async () => {
-      const res = await fetch('http://localhost:5000/api/courses');
-      const data = await res.json();
-      setCourses(data);
-      setLoading(false);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await axios.get('http://localhost:5000/api/courses', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (Array.isArray(response.data)) {
+          setCourses(response.data);
+        } else {
+          console.error('Expected array of courses but got:', response.data);
+          setCourses([]);
+        }
+      } catch (err) {
+        console.error('Error fetching courses:', err);
+        setError(err.message || 'Failed to fetch courses');
+        setCourses([]);
+      } finally {
+        setLoading(false);
+      }
     };
+
     fetchCourses();
   }, []);
 
   if (loading) return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+  if (error) return <div className="flex min-h-screen items-center justify-center text-red-500">{error}</div>;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* <Sidebar /> */}
+    <div className="flex">
+
       <div className="flex-1">
-        {/* <NavBar /> */}
+        <NavBar />
         <div className="p-6">
           {/* Summary Cards */}
           <div className="flex gap-6 mb-8">
@@ -57,24 +80,28 @@ const Dashboard = () => {
           {/* Courses Table */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold mb-4">All Courses</h2>
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-gray-600">
-                  <th className="py-2 px-4 text-left font-medium">Title</th>
-                  <th className="py-2 px-4 text-left font-medium">Price</th>
-                  <th className="py-2 px-4 text-left font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {courses.map(course => (
-                  <tr key={course._id} className="border-b last:border-b-0">
-                    <td className="py-2 px-4">{course.title}</td>
-                    <td className="py-2 px-4">{course.price}</td>
-                    <td className="py-2 px-4">{course.status}</td>
+            {courses.length > 0 ? (
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-600">
+                    <th className="py-2 px-4 text-left font-medium">Title</th>
+                    <th className="py-2 px-4 text-left font-medium">Price</th>
+                    <th className="py-2 px-4 text-left font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {courses.map(course => (
+                    <tr key={course._id} className="border-b last:border-b-0">
+                      <td className="py-2 px-4">{course.courseTitle}</td>
+                      <td className="py-2 px-4">${course.coursePrice}</td>
+                      <td className="py-2 px-4">{course.isPublished ? 'Published' : 'Draft'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-8 text-gray-500">No courses found</div>
+            )}
           </div>
         </div>
       </div>

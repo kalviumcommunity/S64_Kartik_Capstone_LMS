@@ -56,16 +56,25 @@ export const AppContextProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      // Using dummy data for now
-      setAllCourses(dummyCourses);
-      
-      // TODO: Replace with actual API call
-      // const response = await axios.get(`${API_BASE_URL}/api/courses`);
-      // setAllCourses(response.data);
-      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/api/courses`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (Array.isArray(response.data)) {
+        setAllCourses(response.data);
+      } else {
+        console.error('Expected array of courses but got:', response.data);
+        setAllCourses([]);
+      }
     } catch (err) {
       console.error('Error fetching courses:', err);
       setError('Failed to load courses. Please try again later.');
+      setAllCourses([]);
     } finally {
       setLoading(false);
     }
@@ -115,17 +124,21 @@ export const AppContextProvider = ({ children }) => {
         return;
       }
 
-      const response = await axios.get(`${API_BASE_URL}/api/student/enrolled-courses`, {
+      const response = await axios.get(`${API_BASE_URL}/api/enrollments/student/enrolled-courses`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      const coursesWithProgress = response.data.map(course => ({
-        ...course,
-        progress: course.progress || 0,
-        totalLectures: course.totalLectures || calculateTotalLectures(course)
-      }));
-
-      setEnrolledCourses(coursesWithProgress);
+      if (Array.isArray(response.data)) {
+        const coursesWithProgress = response.data.map(enrollment => ({
+          ...enrollment.courseId,
+          progress: enrollment.progress.length || 0,
+          totalLectures: calculateTotalLectures(enrollment.courseId)
+        }));
+        setEnrolledCourses(coursesWithProgress);
+      } else {
+        console.error('Expected array of enrolled courses but got:', response.data);
+        setEnrolledCourses([]);
+      }
     } catch (error) {
       console.error('Error fetching enrolled courses:', error);
       setEnrolledCourses([]);
