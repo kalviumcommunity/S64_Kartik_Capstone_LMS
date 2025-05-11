@@ -6,7 +6,7 @@ const navItems = [
   {
     label: 'Dashboard',
     icon: assets.home_icon,
-    to: '/educator',
+    to: '/educator/dashboard',
   },
   {
     label: 'Add Course',

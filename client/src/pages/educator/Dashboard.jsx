@@ -60,11 +60,11 @@ const Dashboard = () => {
   if (error) return <div className="flex min-h-screen items-center justify-center text-red-500">{error}</div>;
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1">
-        <NavBar />
-        <div className="p-6">
+    <div className="flex flex-col min-h-screen">
+      <NavBar />
+      <div className="flex flex-1">
+        <Sidebar />
+        <div className="flex-1 p-6">
           {/* Summary Cards */}
           <div className="flex gap-6 mb-8">
             <div className="flex-1 flex items-center gap-4 bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">

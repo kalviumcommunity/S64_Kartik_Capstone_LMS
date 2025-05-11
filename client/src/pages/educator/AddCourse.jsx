@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import NavBar from '../../components/educator/NavBar';
+import Sidebar from '../../components/educator/Sidebar';
 
 const AddCourse = () => {
   const navigate = useNavigate();
@@ -181,253 +183,259 @@ const AddCourse = () => {
   };
 
   return (
-    <div className="flex justify-start items-start min-h-[80vh] px-16 pt-8">
-      <form onSubmit={handleSubmit} className="w-full max-w-4xl space-y-6">
-        <div>
-          <label className="block text-sm font-medium mb-1">Course Title</label>
-          <input
-            name="courseTitle"
-            value={form.courseTitle}
-            onChange={handleChange}
-            placeholder="Type here"
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Course Description</label>
-          <textarea
-            name="courseDescription"
-            value={form.courseDescription}
-            onChange={handleChange}
-            placeholder="Enter course description"
-            rows={6}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black resize-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Course Price</label>
-            <input
-              name="coursePrice"
-              value={form.coursePrice}
-              onChange={handleChange}
-              placeholder="0"
-              type="number"
-              min="0"
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Discount (%)</label>
-            <input
-              name="discount"
-              value={form.discount}
-              onChange={handleChange}
-              placeholder="0"
-              type="number"
-              min="0"
-              max="100"
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm">Course Thumbnail</span>
-          <button
-            type="button"
-            className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded flex items-center"
-            onClick={() => fileInputRef.current.click()}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5v-9m-4.5 4.5h9" />
-            </svg>
-          </button>
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            className="hidden"
-            onChange={handleThumbnailChange}
-          />
-          {form.courseThumbnail && (
-            <img src={form.courseThumbnail} alt="Thumbnail Preview" className="w-12 h-8 object-cover rounded border" />
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="isPublished"
-            checked={form.isPublished}
-            onChange={handleChange}
-            className="rounded border-gray-300"
-          />
-          <label className="text-sm font-medium">Publish Course</label>
-        </div>
-
-        {/* Chapter and Lecture Management */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-medium mb-4">Course Content</h3>
-          
-          {/* Current Chapter Form */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h4 className="font-medium mb-2">Add Chapter</h4>
-            <div className="space-y-4">
+    <div className="flex flex-col min-h-screen">
+      <NavBar />
+      <div className="flex flex-1">
+        <Sidebar />
+        <div className="flex-1 p-8">
+          <form onSubmit={handleSubmit} className="w-full max-w-4xl space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-1">Course Title</label>
               <input
-                name="title"
-                value={currentChapter.title}
-                onChange={handleChapterChange}
-                placeholder="Chapter Title"
-                className="w-full border border-gray-300 rounded px-3 py-2"
+                name="courseTitle"
+                value={form.courseTitle}
+                onChange={handleChange}
+                placeholder="Type here"
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black"
               />
-              <textarea
-                name="description"
-                value={currentChapter.description}
-                onChange={handleChapterChange}
-                placeholder="Chapter Description"
-                className="w-full border border-gray-300 rounded px-3 py-2"
-              />
+            </div>
 
-              {/* Current Lecture Form */}
-              <div className="bg-white p-4 rounded-lg">
-                <h5 className="font-medium mb-2">Add Lecture</h5>
+            <div>
+              <label className="block text-sm font-medium mb-1">Course Description</label>
+              <textarea
+                name="courseDescription"
+                value={form.courseDescription}
+                onChange={handleChange}
+                placeholder="Enter course description"
+                rows={6}
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black resize-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Course Price</label>
+                <input
+                  name="coursePrice"
+                  value={form.coursePrice}
+                  onChange={handleChange}
+                  placeholder="0"
+                  type="number"
+                  min="0"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Discount (%)</label>
+                <input
+                  name="discount"
+                  value={form.discount}
+                  onChange={handleChange}
+                  placeholder="0"
+                  type="number"
+                  min="0"
+                  max="100"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-black"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Course Thumbnail</span>
+              <button
+                type="button"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded flex items-center"
+                onClick={() => fileInputRef.current.click()}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5v-9m-4.5 4.5h9" />
+                </svg>
+              </button>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleThumbnailChange}
+              />
+              {form.courseThumbnail && (
+                <img src={form.courseThumbnail} alt="Thumbnail Preview" className="w-12 h-8 object-cover rounded border" />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isPublished"
+                checked={form.isPublished}
+                onChange={handleChange}
+                className="rounded border-gray-300"
+              />
+              <label className="text-sm font-medium">Publish Course</label>
+            </div>
+
+            {/* Chapter and Lecture Management */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium mb-4">Course Content</h3>
+              
+              {/* Current Chapter Form */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 className="font-medium mb-2">Add Chapter</h4>
                 <div className="space-y-4">
                   <input
                     name="title"
-                    value={currentLecture.title}
-                    onChange={handleLectureChange}
-                    placeholder="Lecture Title"
+                    value={currentChapter.title}
+                    onChange={handleChapterChange}
+                    placeholder="Chapter Title"
                     className="w-full border border-gray-300 rounded px-3 py-2"
                   />
                   <textarea
                     name="description"
-                    value={currentLecture.description}
-                    onChange={handleLectureChange}
-                    placeholder="Lecture Description"
+                    value={currentChapter.description}
+                    onChange={handleChapterChange}
+                    placeholder="Chapter Description"
                     className="w-full border border-gray-300 rounded px-3 py-2"
                   />
-                  <input
-                    name="videoUrl"
-                    value={currentLecture.videoUrl}
-                    onChange={handleLectureChange}
-                    placeholder="Video URL"
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                  <input
-                    name="duration"
-                    value={currentLecture.duration}
-                    onChange={handleLectureChange}
-                    placeholder="Duration (in minutes)"
-                    type="number"
-                    min="0"
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      name="isPreviewFree"
-                      checked={currentLecture.isPreviewFree}
-                      onChange={handleLectureChange}
-                      className="rounded border-gray-300"
-                    />
-                    <label className="text-sm">Free Preview</label>
+
+                  {/* Current Lecture Form */}
+                  <div className="bg-white p-4 rounded-lg">
+                    <h5 className="font-medium mb-2">Add Lecture</h5>
+                    <div className="space-y-4">
+                      <input
+                        name="title"
+                        value={currentLecture.title}
+                        onChange={handleLectureChange}
+                        placeholder="Lecture Title"
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                      <textarea
+                        name="description"
+                        value={currentLecture.description}
+                        onChange={handleLectureChange}
+                        placeholder="Lecture Description"
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                      <input
+                        name="videoUrl"
+                        value={currentLecture.videoUrl}
+                        onChange={handleLectureChange}
+                        placeholder="Video URL"
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                      <input
+                        name="duration"
+                        value={currentLecture.duration}
+                        onChange={handleLectureChange}
+                        placeholder="Duration (in minutes)"
+                        type="number"
+                        min="0"
+                        className="w-full border border-gray-300 rounded px-3 py-2"
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          name="isPreviewFree"
+                          checked={currentLecture.isPreviewFree}
+                          onChange={handleLectureChange}
+                          className="rounded border-gray-300"
+                        />
+                        <label className="text-sm">Free Preview</label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addLecture}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      >
+                        Add Lecture
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Current Chapter's Lectures List */}
+                  {currentChapter.lectures.length > 0 && (
+                    <div className="mt-4">
+                      <h5 className="font-medium mb-2">Current Chapter's Lectures</h5>
+                      <ul className="space-y-2">
+                        {currentChapter.lectures.map((lecture, index) => (
+                          <li key={index} className="flex items-center justify-between bg-white p-2 rounded">
+                            <span>{lecture.title}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updatedLectures = [...currentChapter.lectures];
+                                updatedLectures.splice(index, 1);
+                                setCurrentChapter(prev => ({ ...prev, lectures: updatedLectures }));
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <button
                     type="button"
-                    onClick={addLecture}
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    onClick={addChapter}
+                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
                   >
-                    Add Lecture
+                    Add Chapter
                   </button>
                 </div>
               </div>
 
-              {/* Current Chapter's Lectures List */}
-              {currentChapter.lectures.length > 0 && (
-                <div className="mt-4">
-                  <h5 className="font-medium mb-2">Current Chapter's Lectures</h5>
-                  <ul className="space-y-2">
-                    {currentChapter.lectures.map((lecture, index) => (
-                      <li key={index} className="flex items-center justify-between bg-white p-2 rounded">
-                        <span>{lecture.title}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updatedLectures = [...currentChapter.lectures];
-                            updatedLectures.splice(index, 1);
-                            setCurrentChapter(prev => ({ ...prev, lectures: updatedLectures }));
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={addChapter}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-              >
-                Add Chapter
-              </button>
-            </div>
-          </div>
-
-          {/* Added Chapters List */}
-          {form.courseContent.length > 0 && (
-            <div className="mt-6">
-              <h4 className="font-medium mb-2">Added Chapters</h4>
-              <div className="space-y-4">
-                {form.courseContent.map((chapter, chapterIndex) => (
-                  <div key={chapterIndex} className="bg-white p-4 rounded-lg border">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-medium">{chapter.title}</h5>
-                      <button
-                        type="button"
-                        onClick={() => removeChapter(chapterIndex)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        Remove Chapter
-                      </button>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{chapter.description}</p>
-                    <ul className="space-y-2">
-                      {chapter.lectures.map((lecture, lectureIndex) => (
-                        <li key={lectureIndex} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                          <span>{lecture.title}</span>
+              {/* Added Chapters List */}
+              {form.courseContent.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="font-medium mb-2">Added Chapters</h4>
+                  <div className="space-y-4">
+                    {form.courseContent.map((chapter, chapterIndex) => (
+                      <div key={chapterIndex} className="bg-white p-4 rounded-lg border">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="font-medium">{chapter.title}</h5>
                           <button
                             type="button"
-                            onClick={() => removeLecture(chapterIndex, lectureIndex)}
+                            onClick={() => removeChapter(chapterIndex)}
                             className="text-red-500 hover:text-red-700"
                           >
-                            Remove
+                            Remove Chapter
                           </button>
-                        </li>
-                      ))}
-                    </ul>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{chapter.description}</p>
+                        <ul className="space-y-2">
+                          {chapter.lectures.map((lecture, lectureIndex) => (
+                            <li key={lectureIndex} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                              <span>{lecture.title}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeLecture(chapterIndex, lectureIndex)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+            </div>
+
+            <button type="submit" className="bg-black text-white px-8 py-2 rounded mt-2">
+              Create Course
+            </button>
+          </form>
+          {message && (
+            <div className={`mt-4 text-center ${message.includes('success') ? 'text-green-500' : 'text-red-500'}`}>
+              {message}
             </div>
           )}
         </div>
-
-        <button type="submit" className="bg-black text-white px-8 py-2 rounded mt-2">
-          Create Course
-        </button>
-      </form>
-      {message && (
-        <div className={`mt-4 text-center ${message.includes('success') ? 'text-green-500' : 'text-red-500'}`}>
-          {message}
-        </div>
-      )}
+      </div>
     </div>
   );
 };
