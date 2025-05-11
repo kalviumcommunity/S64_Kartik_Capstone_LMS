@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { assets } from '../../assets/assets';
 import axios from 'axios';
+import NavBar from '../../components/educator/NavBar';
+import Sidebar from '../../components/educator/Sidebar';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -102,57 +104,63 @@ const MyCourses = () => {
   }
 
   return (
-    <div className="p-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">My Courses</h2>
-      {courses.length > 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 text-gray-600">
-                <th className="py-3 px-4 text-left font-medium">Thumbnail</th>
-                <th className="py-3 px-4 text-left font-medium">Title</th>
-                <th className="py-3 px-4 text-left font-medium">Price</th>
-                <th className="py-3 px-4 text-left font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {courses.map((course) => (
-                <tr key={course._id} className="border-b last:border-b-0 hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    <img
-                      src={course.courseThumbnail || assets.course_1_thumbnail}
-                      alt={course.courseTitle}
-                      className="w-16 h-10 rounded object-cover border"
-                      onError={e => { e.target.onerror = null; e.target.src = assets.course_1_thumbnail; }}
-                    />
-                  </td>
-                  <td className="py-3 px-4 font-medium text-gray-800">{course.courseTitle}</td>
-                  <td className="py-3 px-4">${course.coursePrice.toFixed(2)}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      course.isPublished 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {course.isPublished ? 'Published' : 'Draft'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="flex flex-col min-h-screen">
+      <NavBar />
+      <div className="flex flex-1">
+        <Sidebar />
+        <div className="flex-1 p-8">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">My Courses</h2>
+          {courses.length > 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-600">
+                    <th className="py-3 px-4 text-left font-medium">Thumbnail</th>
+                    <th className="py-3 px-4 text-left font-medium">Title</th>
+                    <th className="py-3 px-4 text-left font-medium">Price</th>
+                    <th className="py-3 px-4 text-left font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {courses.map((course) => (
+                    <tr key={course._id} className="border-b last:border-b-0 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <img
+                          src={course.courseThumbnail || assets.course_1_thumbnail}
+                          alt={course.courseTitle}
+                          className="w-16 h-10 rounded object-cover border"
+                          onError={e => { e.target.onerror = null; e.target.src = assets.course_1_thumbnail; }}
+                        />
+                      </td>
+                      <td className="py-3 px-4 font-medium text-gray-800">{course.courseTitle}</td>
+                      <td className="py-3 px-4">${course.coursePrice.toFixed(2)}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          course.isPublished 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {course.isPublished ? 'Published' : 'Draft'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-white rounded-lg shadow-md border border-gray-100">
+              <p className="text-xl text-gray-600">No courses found</p>
+              <button
+                onClick={() => navigate('/educator/create-course')}
+                className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
+              >
+                Create Your First Course
+              </button>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="text-center py-16 bg-white rounded-lg shadow-md border border-gray-100">
-          <p className="text-xl text-gray-600">No courses found</p>
-          <button
-            onClick={() => navigate('/educator/create-course')}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
-          >
-            Create Your First Course
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
