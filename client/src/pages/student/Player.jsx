@@ -7,6 +7,7 @@ import { useContext } from 'react';
 import Loading from '../../components/student/Loading';
 import Footer from '../../components/student/Footer';
 import Rating from '../../components/student/Rating';
+import axios from 'axios';
 
 const VideoPlayer = () => {
   const { courseId } = useParams();
@@ -19,41 +20,83 @@ const VideoPlayer = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (allCourses && courseId) {
-      const course = allCourses.find(course => String(course._id) === String(courseId));
-      if (course) {
-        setCourseData(course);
-        // Initialize all sections as expanded
-        if (course.courseContent) {
-          const initialExpandState = {};
-          course.courseContent.forEach(chapter => {
-            initialExpandState[chapter.chapterId] = true;
-          });
-          setExpandedSections(initialExpandState);
+    const fetchCourseData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
         }
-        // Get the first lecture from the first chapter
-        if (course.courseContent && course.courseContent.length > 0) {
-          const firstChapter = course.courseContent[0];
-          if (firstChapter.chapterContent && firstChapter.chapterContent.length > 0) {
-            const firstLecture = firstChapter.chapterContent[0];
-            if (firstLecture.videoUrl) {
-              const videoId = extractYouTubeId(firstLecture.videoUrl);
-              if (videoId) {
-                setPlayerData({
-                  videoId,
-                  chapter: 1,
-                  lecture: 1,
-                  lectureTitle: firstLecture.lectureTitle,
-                  lectureUrl: firstLecture.videoUrl
-                });
-                setCurrentLecture({ chapterIndex: 0, lectureIndex: 0 });
-              }
-            }
+
+        const response = await axios.get(`/api/courses/${courseId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const course = response.data;
+        console.log('Fetched Course:', course);
+
+        if (course) {
+          setCourseData(course);
+          // Initialize all sections as expanded
+          if (course.courseContent) {
+            const initialExpandState = {};
+            course.courseContent.forEach(chapter => {
+              initialExpandState[chapter._id] = true;
+            });
+            setExpandedSections(initialExpandState);
           }
+          // Get the first lecture from the first chapter
+          if (course.courseContent && course.courseContent.length > 0) {
+            const firstChapter = course.courseContent[0];
+            console.log('First Chapter:', firstChapter);
+            
+            if (firstChapter.lectures && firstChapter.lectures.length > 0) {
+              const firstLecture = firstChapter.lectures[0];
+              console.log('First Lecture:', firstLecture);
+              
+              const videoUrl = firstLecture.videoUrl || firstLecture.lectureUrl;
+              if (videoUrl) {
+                const videoId = extractYouTubeId(videoUrl);
+                console.log('Extracted Video ID:', videoId);
+                
+                if (videoId) {
+                  setPlayerData({
+                    videoId,
+                    chapter: 1,
+                    lecture: 1,
+                    lectureTitle: firstLecture.title || firstLecture.lectureTitle,
+                    lectureUrl: videoUrl
+                  });
+                  setCurrentLecture({ chapterIndex: 0, lectureIndex: 0 });
+                } else {
+                  setError('Invalid YouTube video URL');
+                }
+              } else {
+                setError('No video URL found for this lecture');
+              }
+            } else {
+              setError('No lectures found in this chapter');
+            }
+          } else {
+            setError('No chapters found in this course');
+          }
+        } else {
+          setError('Course not found');
         }
+      } catch (error) {
+        console.error('Error fetching course data:', error);
+        setError(error.response?.data?.message || 'Error loading course data');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
+    };
+
+    if (courseId) {
+      fetchCourseData();
     }
+  }, [courseId]);
   }, [allCourses, courseId]);
 
   const toggleSection = (sectionId) => {
