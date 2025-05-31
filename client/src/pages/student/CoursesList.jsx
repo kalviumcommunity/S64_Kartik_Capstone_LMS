@@ -15,6 +15,7 @@ const CoursesList = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState("default");
 
   useEffect(() => {
     const checkAuth = () => {
@@ -73,22 +74,53 @@ const CoursesList = () => {
     }
   }, [isAuthenticated]);
 
-  // Filter courses whenever courses or searchTerm changes
-  useEffect(() => {
-    if (courses && courses.length > 0) {
-      const tempCourses = courses.slice();
-      
-      if (searchTerm) {
-        setFilteredCourses(
-          tempCourses.filter((item) =>
-            item.courseTitle.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-        );
-      } else {
-        setFilteredCourses(tempCourses);
-      }
+  // Sort courses based on selected criteria
+  const sortCourses = (coursesToSort) => {
+    if (!coursesToSort || coursesToSort.length === 0) return [];
+    
+    const sortedCourses = [...coursesToSort];
+    switch (sortBy) {
+      case "price-asc":
+        return sortedCourses.sort((a, b) => (a.coursePrice || 0) - (b.coursePrice || 0));
+      case "price-desc":
+        return sortedCourses.sort((a, b) => (b.coursePrice || 0) - (a.coursePrice || 0));
+      case "title-asc":
+        return sortedCourses.sort((a, b) => (a.courseTitle || '').localeCompare(b.courseTitle || ''));
+      case "title-desc":
+        return sortedCourses.sort((a, b) => (b.courseTitle || '').localeCompare(a.courseTitle || ''));
+      case "rating":
+        return sortedCourses.sort((a, b) => {
+          const ratingA = a.courseRatings?.length ? 
+            a.courseRatings.reduce((acc, curr) => acc + (curr.rating || 0), 0) / a.courseRatings.length : 0;
+          const ratingB = b.courseRatings?.length ? 
+            b.courseRatings.reduce((acc, curr) => acc + (curr.rating || 0), 0) / b.courseRatings.length : 0;
+          return ratingB - ratingA;
+        });
+      default:
+        return sortedCourses;
     }
-  }, [courses, searchTerm]);
+  };
+
+  // Filter and sort courses whenever courses, searchTerm, or sortBy changes
+  useEffect(() => {
+    if (!courses || courses.length === 0) {
+      setFilteredCourses([]);
+      return;
+    }
+
+    let tempCourses = [...courses];
+    
+    // Apply search filter
+    if (searchTerm) {
+      tempCourses = tempCourses.filter((item) =>
+        item.courseTitle?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply sorting
+    tempCourses = sortCourses(tempCourses);
+    setFilteredCourses(tempCourses);
+  }, [courses, searchTerm, sortBy]);
 
   // Set initial search term from URL parameter
   useEffect(() => {
@@ -159,8 +191,24 @@ const CoursesList = () => {
               </div>
             </div>
             
-            <div className="w-full lg:w-1/3">
-              <SearchBar onSearch={handleSearch} initialValue={searchTerm} />
+            <div className="flex flex-col lg:flex-row gap-4 w-full lg:w-2/3">
+              <div className="w-full lg:w-1/2">
+                <SearchBar onSearch={handleSearch} initialValue={searchTerm} />
+              </div>
+              <div className="w-full lg:w-1/2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="default">Sort By</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="title-asc">Title: A to Z</option>
+                  <option value="title-desc">Title: Z to A</option>
+                  <option value="rating">Rating: High to Low</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
