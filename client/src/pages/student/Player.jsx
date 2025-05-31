@@ -64,22 +64,66 @@ const VideoPlayer = () => {
   };
 
   const extractYouTubeId = (url) => {
-    if (!url) return null;
-    
-    // Handle different YouTube URL formats
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    
-    // If no match found, try to extract ID directly (in case it's just the ID)
-    if (!match) {
-      // Check if it's just an 11-character video ID
-      if (url.length === 11) {
-        return url;
-      }
+    if (!url) {
+      console.error('No URL provided to extractYouTubeId');
       return null;
     }
     
-    return (match && match[2].length === 11) ? match[2] : null;
+    try {
+      console.log('Attempting to extract YouTube ID from URL:', url);
+      
+      // Handle different YouTube URL formats
+      const patterns = [
+        // Standard watch URLs
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/watch\?.*&v=)([^#&?]*).*/,
+        // Direct video ID
+        /^([a-zA-Z0-9_-]{11})$/,
+        // YouTube Shorts
+        /youtube\.com\/shorts\/([^#&?]*)/,
+        // Standard watch URL with additional parameters
+        /youtube\.com\/watch\?.*v=([^#&?]*)/,
+        // YouTube embed URLs
+        /youtube\.com\/embed\/([^#&?]*)/,
+        // YouTube-nocookie.com URLs
+        /youtube-nocookie\.com\/embed\/([^#&?]*)/,
+        // YouTube URLs with additional parameters
+        /youtube\.com\/watch\?.*&v=([^#&?]*)/,
+        // YouTube URLs with feature parameter
+        /youtube\.com\/watch\?.*feature=.*&v=([^#&?]*)/,
+        // YouTube URLs with time parameter
+        /youtube\.com\/watch\?.*t=.*&v=([^#&?]*)/
+      ];
+
+      // Try each pattern
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+          const videoId = match[1];
+          console.log('Successfully extracted YouTube ID:', videoId);
+          return videoId;
+        }
+      }
+
+      // If the URL is just the video ID
+      if (url.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(url)) {
+        console.log('URL is already a valid YouTube ID:', url);
+        return url;
+      }
+
+      // If no pattern matches, try to extract ID from the last part of the URL
+      const urlParts = url.split('/');
+      const lastPart = urlParts[urlParts.length - 1];
+      if (lastPart && lastPart.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(lastPart)) {
+        console.log('Extracted YouTube ID from URL path:', lastPart);
+        return lastPart;
+      }
+
+      console.error('Could not extract YouTube ID from URL:', url);
+      return null;
+    } catch (error) {
+      console.error('Error extracting YouTube ID:', error);
+      return null;
+    }
   };
 
   const onPlayerError = (event) => {
@@ -105,17 +149,44 @@ const VideoPlayer = () => {
   };
 
   const handleWatch = (chapterIdx, lectureIdx) => {
-    const chapter = courseData.courseContent[chapterIdx];
-    const lecture = chapter.chapterContent[lectureIdx];
-    const videoId = extractYouTubeId(lecture.videoUrl);
-    setPlayerData({
-      videoId,
-      chapter: chapterIdx + 1,
-      lecture: lectureIdx + 1,
-      lectureTitle: lecture.lectureTitle,
-      lectureUrl: lecture.videoUrl
-    });
-    setCurrentLecture({ chapterIndex: chapterIdx, lectureIndex: lectureIdx });
+    try {
+      if (!courseData?.courseContent?.[chapterIdx]?.lectures?.[lectureIdx]) {
+        setError('Invalid chapter or lecture selection');
+        return;
+      }
+
+      const chapter = courseData.courseContent[chapterIdx];
+      const lecture = chapter.lectures[lectureIdx];
+      
+      console.log('Selected lecture:', lecture);
+      
+      const videoUrl = lecture.videoUrl || lecture.lectureUrl;
+      if (!videoUrl) {
+        setError('No video URL found for this lecture');
+        return;
+      }
+
+      const videoId = extractYouTubeId(videoUrl);
+      console.log('Extracted video ID:', videoId);
+      
+      if (!videoId) {
+        setError('Invalid YouTube video URL. Please check the video link format.');
+        return;
+      }
+
+      setPlayerData({
+        videoId,
+        chapter: chapterIdx + 1,
+        lecture: lectureIdx + 1,
+        lectureTitle: lecture.title || lecture.lectureTitle,
+        lectureUrl: videoUrl
+      });
+      setCurrentLecture({ chapterIndex: chapterIdx, lectureIndex: lectureIdx });
+      setError(null);
+    } catch (error) {
+      console.error('Error handling watch action:', error);
+      setError('Error loading video');
+    }
   };
 
   if (loading) {
@@ -141,7 +212,7 @@ const VideoPlayer = () => {
                       width: '100%',
                       height: '100%',
                       playerVars: { 
-                        autoplay: 0,
+                        autoplay: 1,
                         modestbranding: 1,
                         rel: 0,
                         controls: 1,
@@ -150,12 +221,19 @@ const VideoPlayer = () => {
                         playsinline: 1,
                         enablejsapi: 1,
                         origin: window.location.origin,
-                        widgetid: Math.floor(Math.random() * 1000)
+                        host: 'https://www.youtube.com'
                       }
                     }} 
-                    onError={onPlayerError}
-                    onReady={onPlayerReady}
+                    onError={(event) => {
+                      console.error('YouTube Player Error:', event);
+                      setError('Failed to load video. Please check if the video URL is valid.');
+                    }}
+                    onReady={(event) => {
+                      console.log('YouTube Player Ready');
+                      setError(null);
+                    }}
                     iframeClassName="w-full aspect-video"
+                    className="w-full aspect-video"
                   />
                   {error && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75">
@@ -176,19 +254,19 @@ const VideoPlayer = () => {
                 </div>
               )}
               {/* Lecture Info and Mark Complete Button */}
-{playerData && (
-  <>
-    <div className="flex justify-between items-center mt-2 px-4 pb-2">
-      <p className="text-sm text-gray-700 font-medium">
-        {playerData.chapter}.{playerData.lecture} {playerData.lectureTitle}
-      </p>
-      <button className="text-blue-600 text-sm font-semibold">{false ? 'Completed' : 'Mark Complete'}</button>
-    </div>
-    <div className="px-4 pb-4">
-      <Rating />
-    </div>
-  </>
-)}
+              {playerData && (
+                <>
+                  <div className="flex justify-between items-center mt-2 px-4 pb-2">
+                    <p className="text-sm text-gray-700 font-medium">
+                      {playerData.chapter}.{playerData.lecture} {playerData.lectureTitle}
+                    </p>
+                    <button className="text-blue-600 text-sm font-semibold">{false ? 'Completed' : 'Mark Complete'}</button>
+                  </div>
+                  <div className="px-4 pb-4">
+                    <Rating />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -196,44 +274,86 @@ const VideoPlayer = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg p-4">
               <h2 className="text-xl font-bold mb-4">Course Structure</h2>
-              <div className="space-y-2">
-                {courseData.courseContent?.map((chapter, chapterIdx) => {
-                  const totalMinutes = chapter.chapterContent.reduce((sum, lec) => sum + (lec.lectureDuration || 0), 0);
-                  return (
-                    <div key={chapter.chapterId} className="border rounded-md mb-2">
-                      <button
-                        onClick={() => toggleSection(chapter.chapterId)}
-                        className="w-full p-3 text-left font-medium flex justify-between items-center"
+              {courseData?.courseContent ? (
+                <div className="space-y-2">
+                  {courseData.courseContent.map((chapter, chapterIdx) => {
+                    const totalMinutes = chapter.lectures?.reduce((sum, lec) => sum + (lec.duration || 0), 0) || 0;
+                    const isCurrentChapter = currentLecture.chapterIndex === chapterIdx;
+                    
+                    return (
+                      <div 
+                        key={chapter._id} 
+                        className={`border rounded-md mb-2 ${isCurrentChapter ? 'border-blue-500' : 'border-gray-200'}`}
                       >
-                        <span>{chapter.chapterTitle}</span>
-                        <span className="text-xs text-gray-500">{chapter.chapterContent.length} lectures - {totalMinutes} minutes</span>
-                        <span>{expandedSections[chapter.chapterId] ? '▼' : '▶'}</span>
-                      </button>
-                      {expandedSections[chapter.chapterId] && (
-                        <div className="pl-4 pb-2">
-                          {chapter.chapterContent.map((lecture, lectureIdx) => (
-                            <div key={lecture.lectureId} className="py-2 flex justify-between items-center">
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-400">▶</span>
-                                <span className="text-sm">{lecture.lectureTitle}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  className="text-blue-600 text-xs hover:underline"
-                                  onClick={() => handleWatch(chapterIdx, lectureIdx)}
+                        <button
+                          onClick={() => toggleSection(chapter._id)}
+                          className="w-full p-3 text-left font-medium flex justify-between items-center hover:bg-gray-50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600">{chapterIdx + 1}.</span>
+                            <span className="font-medium">{chapter.title}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-gray-500">
+                              {chapter.lectures?.length || 0} lectures • {formatDuration(totalMinutes)}
+                            </span>
+                            <span className="text-gray-400">
+                              {expandedSections[chapter._id] ? '▼' : '▶️'}
+                            </span>
+                          </div>
+                        </button>
+                        {expandedSections[chapter._id] && (
+                          <div className="pl-4 pb-2">
+                            {chapter.lectures?.map((lecture, lectureIdx) => {
+                              const isCurrentLecture = 
+                                currentLecture.chapterIndex === chapterIdx && 
+                                currentLecture.lectureIndex === lectureIdx;
+                              
+                              return (
+                                <div 
+                                  key={lecture._id} 
+                                  className={`py-2 px-2 rounded-md ${
+                                    isCurrentLecture ? 'bg-blue-50' : 'hover:bg-gray-50'
+                                  }`}
                                 >
-                                  Watch
-                                </button>
-                                <span className="text-xs text-gray-500">{formatDuration(lecture.lectureDuration)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-400">▶️</span>
+                                      <span className="text-sm">
+                                        {chapterIdx + 1}.{lectureIdx + 1} {lecture.title}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        className={`text-sm px-2 py-1 rounded ${
+                                          isCurrentLecture 
+                                            ? 'bg-blue-500 text-white' 
+                                            : 'text-blue-600 hover:bg-blue-50'
+                                        }`}
+                                        onClick={() => handleWatch(chapterIdx, lectureIdx)}
+                                      >
+                                        {isCurrentLecture ? 'Playing' : 'Watch'}
+                                      </button>
+                                      <span className="text-xs text-gray-500">
+                                        {formatDuration(lecture.duration)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {lecture.isPreviewFree && (
+                                    <span className="text-xs text-green-600 ml-6">Preview Available</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-4">No course content available</div>
+              )}
             </div>
           </div>
         </div>
