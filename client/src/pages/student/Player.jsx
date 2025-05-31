@@ -96,7 +96,6 @@ const VideoPlayer = () => {
     if (courseId) {
       fetchCourseData();
     }
-  }, [courseId]);
   }, [allCourses, courseId]);
 
   const toggleSection = (sectionId) => {
