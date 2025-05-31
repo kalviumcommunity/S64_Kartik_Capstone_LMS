@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Rating = ({ initialRating, onRate }) => {
   const [rating, setRating] = useState(initialRating || 0);
