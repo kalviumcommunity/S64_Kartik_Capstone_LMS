@@ -14,6 +14,7 @@ import enrollmentRoutes from './routes/enrollment.js';
 import studentRoutes from './routes/student.js';
 import llmRoutes from './routes/llmRoutes.js';
 import ssrRoutes from './routes/ssrRoutes.js';
+import otpRoutes from './routes/otp.js';
 import mongoose from 'mongoose';
 
 dotenv.config();
@@ -47,6 +48,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/llm', llmRoutes);
+app.use('/api/otp', otpRoutes);
 
 // SSR Routes - These render React components on the server
 app.use('/api', ssrRoutes);
@@ -72,4 +74,6 @@ app.listen(PORT, () => {
   console.log(`📱 SSR Demo available at http://localhost:${PORT}/api/ssr`);
   console.log(`📊 SSR Stats at http://localhost:${PORT}/api/ssr/stats`);
   console.log(`📚 SSR Course pages at http://localhost:${PORT}/api/ssr/course/1`);
+  console.log(`🔐 OTP Service available at http://localhost:${PORT}/api/otp`);
+  console.log(`🔐 OTP Health Check at http://localhost:${PORT}/api/otp/health`);
 });
