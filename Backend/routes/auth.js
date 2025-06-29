@@ -1,6 +1,6 @@
 import express from 'express';
 import passport from 'passport';
-import { register, login, refreshToken } from '../controllers/authController.js';
+import { register, login, completeLogin, refreshToken } from '../controllers/authController.js';
 
 const router = express.Router();
 
@@ -9,6 +9,9 @@ router.post('/register', register);
 
 // POST /login - User Login
 router.post('/login', login);
+
+// POST /complete-login - Complete login after OTP verification
+router.post('/complete-login', completeLogin);
 
 // POST /refresh - Token Refresh
 router.post('/refresh', refreshToken);

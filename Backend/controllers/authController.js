@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import otpService from '../services/otpService.js';
 
 // Simple in-memory rate limiting
 const loginAttempts = new Map();
@@ -29,6 +30,14 @@ export const register = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Check if OTP is verified for this email
+    const otpStatus = await otpService.getOTPStatus(email, 'registration');
+    if (!otpStatus.exists || !otpStatus.isVerified) {
+      return res.status(400).json({ 
+        message: 'Please verify your email with OTP before registration' 
+      });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -103,6 +112,22 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Check if OTP is verified for login (2FA)
+    const otpStatus = await otpService.getOTPStatus(email, 'login');
+    if (!otpStatus.exists || !otpStatus.isVerified) {
+      // Return success but indicate OTP verification is needed
+      return res.status(200).json({ 
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        },
+        requiresOTP: true,
+        message: 'Please verify OTP to complete login'
+      });
+    }
+
     // Reset attempts on successful login
     loginAttempts.delete(key);
 
@@ -127,6 +152,58 @@ export const login = async (req, res) => {
     res.status(200).json({ user: userResponse, token });
   } catch (error) {
     console.error("Error during login:", error);
+    res.status(500).json({ message: 'Something went wrong', error: error.message });
+  }
+};
+
+// New endpoint for completing login after OTP verification
+export const completeLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if OTP is verified for login
+    const otpStatus = await otpService.getOTPStatus(email, 'login');
+    if (!otpStatus.exists || !otpStatus.isVerified) {
+      return res.status(400).json({ 
+        message: 'OTP verification required to complete login' 
+      });
+    }
+
+    const token = jwt.sign(
+      { 
+        id: user._id, 
+        role: user.role,
+        name: user.name
+      }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '1h' }
+    );
+
+    // Don't return password in response
+    const userResponse = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    };
+
+    res.status(200).json({ user: userResponse, token });
+  } catch (error) {
+    console.error("Error during login completion:", error);
     res.status(500).json({ message: 'Something went wrong', error: error.message });
   }
 };

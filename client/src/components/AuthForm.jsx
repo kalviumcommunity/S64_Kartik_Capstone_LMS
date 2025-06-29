@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import GoogleAuth from './GoogleAuth';
+import OTPVerification from './OTPVerification';
 
 const AuthForm = ({ isLogin }) => {
   const initialForm = isLogin 
@@ -12,6 +13,9 @@ const AuthForm = ({ isLogin }) => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpIdentifier, setOtpIdentifier] = useState('');
+  const [otpPurpose, setOtpPurpose] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser, setIsEducator } = useAppContext();
@@ -71,6 +75,32 @@ const AuthForm = ({ isLogin }) => {
     }
   };
 
+  const sendOTP = async (identifier, purpose) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, purpose })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setOtpIdentifier(identifier);
+        setOtpPurpose(purpose);
+        setShowOTP(true);
+        setMessage(`OTP sent to ${identifier}`);
+        return true;
+      } else {
+        setMessage(data.message || 'Failed to send OTP');
+        return false;
+      }
+    } catch (error) {
+      setMessage('Error sending OTP. Please try again.');
+      return false;
+    }
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     
@@ -81,44 +111,46 @@ const AuthForm = ({ isLogin }) => {
     setIsLoading(true);
     setMessage('');
     
-    const endpoint = isLogin 
-      ? 'http://localhost:5000/api/auth/login'
-      : 'http://localhost:5000/api/auth/register';
-      
     const trimmedForm = Object.entries(form).reduce((acc, [key, value]) => {
       acc[key] = typeof value === 'string' ? value.trim() : value;
       return acc;
     }, {});
     
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(trimmedForm)
-      });
-      
-      const data = await res.json();
-      
-      if (res.ok) {
-        setMessage(isLogin ? 'Login successful!' : 'Registration successful! Please log in.');
+      if (isLogin) {
+        // For login, first try to authenticate, then send OTP if successful
+        const loginResponse = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(trimmedForm)
+        });
         
-        if (isLogin) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          setUser(data.user);
-          setIsEducator(data.user.role === 'educator');
-          
-          // Redirect based on role
-          if (data.user.role === 'educator') {
-            navigate('/educator');
+        const loginData = await loginResponse.json();
+        
+        if (loginResponse.ok) {
+          // Check if OTP verification is required
+          if (loginData.requiresOTP) {
+            // Send OTP for 2FA
+            const otpSent = await sendOTP(trimmedForm.email, 'login');
+            if (otpSent) {
+              setMessage('Login successful! Please verify OTP to continue.');
+            } else {
+              // If OTP fails, still allow login (fallback)
+              completeLogin(loginData);
+            }
           } else {
-            navigate('/');
+            // No OTP required, complete login directly
+            completeLogin(loginData);
           }
         } else {
-          setTimeout(() => navigate('/login'), 1500);
+          setMessage(loginData.message || 'Login failed');
         }
       } else {
-        setMessage(data.message || (isLogin ? 'Login failed' : 'Registration failed'));
+        // For registration, send OTP first
+        const otpSent = await sendOTP(trimmedForm.email, 'registration');
+        if (!otpSent) {
+          setMessage('Failed to send OTP. Please try again.');
+        }
       }
     } catch (error) {
       setMessage('Error connecting to server');
@@ -127,6 +159,100 @@ const AuthForm = ({ isLogin }) => {
     }
   };
 
+  const completeLogin = (loginData) => {
+    localStorage.setItem('token', loginData.token);
+    localStorage.setItem('user', JSON.stringify(loginData.user));
+    setUser(loginData.user);
+    setIsEducator(loginData.user.role === 'educator');
+    
+    // Redirect based on role
+    if (loginData.user.role === 'educator') {
+      navigate('/educator');
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleOTPVerificationSuccess = async (otpData) => {
+    if (isLogin) {
+      // For login, use the complete-login endpoint after OTP verification
+      const loginResponse = await fetch('http://localhost:5000/api/auth/complete-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      
+      const loginData = await loginResponse.json();
+      if (loginResponse.ok) {
+        completeLogin(loginData);
+      } else {
+        setMessage(loginData.message || 'Login failed');
+      }
+    } else {
+      // For registration, proceed with user creation
+      const trimmedForm = Object.entries(form).reduce((acc, [key, value]) => {
+        acc[key] = typeof value === 'string' ? value.trim() : value;
+        return acc;
+      }, {});
+      
+      const registerResponse = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trimmedForm)
+      });
+      
+      const registerData = await registerResponse.json();
+      
+      if (registerResponse.ok) {
+        setMessage('Registration successful! Please log in.');
+        setTimeout(() => {
+          setShowOTP(false);
+          navigate('/login');
+        }, 1500);
+      } else {
+        setMessage(registerData.message || 'Registration failed');
+      }
+    }
+  };
+
+  const handleOTPVerificationFailure = (error) => {
+    setMessage(`OTP verification failed: ${error}`);
+  };
+
+  const handleBackToForm = () => {
+    setShowOTP(false);
+    setMessage('');
+  };
+
+  // Show OTP verification screen
+  if (showOTP) {
+    return (
+      <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold mb-6">
+          {isLogin ? 'Two-Factor Authentication' : 'Verify Your Email'}
+        </h2>
+        
+        <OTPVerification
+          identifier={otpIdentifier}
+          purpose={otpPurpose}
+          onVerificationSuccess={handleOTPVerificationSuccess}
+          onVerificationFailure={handleOTPVerificationFailure}
+          isLoading={isLoading}
+        />
+        
+        <div className="mt-4 text-center">
+          <button
+            onClick={handleBackToForm}
+            className="text-blue-600 hover:underline"
+          >
+            ← Back to {isLogin ? 'Login' : 'Registration'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show regular form
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6">{isLogin ? 'Login' : 'Register'}</h2>
