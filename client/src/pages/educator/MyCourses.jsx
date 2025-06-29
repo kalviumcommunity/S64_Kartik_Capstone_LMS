@@ -45,6 +45,7 @@ const MyCourses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -75,6 +76,27 @@ const MyCourses = () => {
 
     fetchCourses();
   }, [navigate]);
+
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleteLoading(courseId);
+    try {
+      await api.delete(`/api/courses/${courseId}`);
+      setCourses(prev => prev.filter(course => course._id !== courseId));
+    } catch (err) {
+      console.error('Error deleting course:', err);
+      alert('Failed to delete course. Please try again.');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
+  const handleEditCourse = (courseId) => {
+    navigate(`/educator/edit-course/${courseId}`);
+  };
 
   if (loading) {
     return (
@@ -109,7 +131,16 @@ const MyCourses = () => {
       <div className="flex flex-1">
         <Sidebar />
         <div className="flex-1 p-8">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800">My Courses</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">My Courses</h2>
+            <button
+              onClick={() => navigate('/educator/add-course')}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200"
+            >
+              Add New Course
+            </button>
+          </div>
+          
           {courses.length > 0 ? (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <table className="min-w-full text-sm">
@@ -119,6 +150,7 @@ const MyCourses = () => {
                     <th className="py-3 px-4 text-left font-medium">Title</th>
                     <th className="py-3 px-4 text-left font-medium">Price</th>
                     <th className="py-3 px-4 text-left font-medium">Status</th>
+                    <th className="py-3 px-4 text-left font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -143,6 +175,23 @@ const MyCourses = () => {
                           {course.isPublished ? 'Published' : 'Draft'}
                         </span>
                       </td>
+                      <td className="py-3 px-4">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEditCourse(course._id)}
+                            className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 transition-colors duration-200"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCourse(course._id)}
+                            disabled={deleteLoading === course._id}
+                            className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deleteLoading === course._id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -152,7 +201,7 @@ const MyCourses = () => {
             <div className="text-center py-16 bg-white rounded-lg shadow-md border border-gray-100">
               <p className="text-xl text-gray-600">No courses found</p>
               <button
-                onClick={() => navigate('/educator/create-course')}
+                onClick={() => navigate('/educator/add-course')}
                 className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
               >
                 Create Your First Course

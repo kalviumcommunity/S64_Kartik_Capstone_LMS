@@ -15,6 +15,7 @@ import Player from './pages/student/Player';
 import Educator from './pages/educator/Educator';
 import Dashboard from './pages/educator/Dashboard';
 import AddCourse from './pages/educator/AddCourse';
+import EditCourse from './pages/educator/EditCourse';
 import MyCourses from './pages/educator/MyCourses';
 import StudentsEnrolled from './pages/educator/StudentsEnrolled';
 import Register from './pages/Register';
@@ -69,6 +70,11 @@ const App = () => {
         <Route path="/educator/add-course" element={
           <ProtectedRoute requireEducator>
             <AddCourse />
+          </ProtectedRoute>
+        } />
+        <Route path="/educator/edit-course/:id" element={
+          <ProtectedRoute requireEducator>
+            <EditCourse />
           </ProtectedRoute>
         } />
         <Route path="/educator/my-courses" element={
