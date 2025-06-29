@@ -1,6 +1,7 @@
 import Course from '../models/Course.js';
 import asyncHandler from 'express-async-handler';
 import Enrollment from '../models/Enrollment.js';
+import redisClient from '../utils/redisClient.js'; // Import Redis client
 
 
 // Create a new course
@@ -66,11 +67,34 @@ export const addCourse = asyncHandler(async (req, res) => {
 
 // Get all courses
 export const getCourses = asyncHandler(async (req, res) => {
-  const courses = await Course.find()
-    .select('courseTitle courseThumbnail coursePrice educator courseRatings isPublished')
-    .populate('educator', 'name email')
-    .populate('courseRatings.student', 'name');
-  res.json(courses);
+  const cacheKey = 'all_courses'; // Key for caching all courses
+  try {
+    // 1. Check if data exists in Redis
+    const cachedCourses = await redisClient.get(cacheKey);
+    if (cachedCourses) {
+      // Cache Hit: Return cached data
+      console.log('Cache Hit: Returning courses from Redis');
+      return res.json(JSON.parse(cachedCourses));
+    }
+    // Cache Miss: Fetch from MongoDB
+    console.log('Cache Miss: Fetching courses from MongoDB');
+    const courses = await Course.find()
+      .select('courseTitle courseThumbnail coursePrice educator courseRatings isPublished')
+      .populate('educator', 'name email')
+      .populate('courseRatings.student', 'name');
+    // 2. Store result in Redis with TTL (60 seconds)
+    await redisClient.setEx(cacheKey, 60, JSON.stringify(courses));
+    // 3. Return the fresh data
+    res.json(courses);
+  } catch (err) {
+    // If Redis fails, fallback to DB and log error
+    console.error('Redis error or DB error:', err);
+    const courses = await Course.find()
+      .select('courseTitle courseThumbnail coursePrice educator courseRatings isPublished')
+      .populate('educator', 'name email')
+      .populate('courseRatings.student', 'name');
+    res.json(courses);
+  }
 });
 
 // Get course by ID
