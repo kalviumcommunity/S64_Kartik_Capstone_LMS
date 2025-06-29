@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import courseRoutes from './routes/courseRoutes.js';
 import enrollmentRoutes from './routes/enrollment.js';
 import studentRoutes from './routes/student.js';
+import llmRoutes from './routes/llmRoutes.js';
 import mongoose from 'mongoose';
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/llm', llmRoutes);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
