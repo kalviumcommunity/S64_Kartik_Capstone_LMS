@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import passport from 'passport';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import connectDB from './configs/mongodb.js';
 import './config/passport.js';  // Import passport config
 import authRoutes from './routes/auth.js';
@@ -12,6 +13,7 @@ import courseRoutes from './routes/courseRoutes.js';
 import enrollmentRoutes from './routes/enrollment.js';
 import studentRoutes from './routes/student.js';
 import llmRoutes from './routes/llmRoutes.js';
+import ssrRoutes from './routes/ssrRoutes.js';
 import mongoose from 'mongoose';
 
 dotenv.config();
@@ -39,12 +41,26 @@ app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
 
-// Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/llm', llmRoutes);
+
+// SSR Routes - These render React components on the server
+app.use('/api', ssrRoutes);
+
+// Serve static files from the React build
+app.use(express.static('../client/dist'));
+
+// Catch-all handler for client-side routing
+app.get('*', (req, res) => {
+  // Only handle non-API routes
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.resolve(process.cwd(), '../client/dist/index.html'));
+  }
+});
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -52,5 +68,8 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch((err) => console.error('MongoDB connection error:', err));
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`📱 SSR Demo available at http://localhost:${PORT}/api/ssr`);
+  console.log(`📊 SSR Stats at http://localhost:${PORT}/api/ssr/stats`);
+  console.log(`📚 SSR Course pages at http://localhost:${PORT}/api/ssr/course/1`);
 });
