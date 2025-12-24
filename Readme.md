@@ -15,6 +15,7 @@ The system features secure authentication, role-based access, and seamless user 
 - Dashboards for All Roles
 - JWT Authentication & Google OAuth
 - Deployment on Render (Backend) & Vercel (Frontend)
+- Adding an AI Chatbot which will help to find appropriate course for user and can also clear their doubts(Under Implementation).
 
 ---
 
