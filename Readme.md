@@ -83,4 +83,5 @@ https://s64-kartik-capstone-lms.vercel.app/
 
 Updating The Project!
 Be Ready Guys...
-Improving UI/UX...
+Improving UI/UX..
+creating a side chat bot
