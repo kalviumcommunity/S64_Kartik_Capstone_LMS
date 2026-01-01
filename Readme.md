@@ -6,7 +6,7 @@ The system features secure authentication, role-based access, and seamless user 
 
 ---
 
-## Key Featuresss
+## Key Features
 
 - User Authentication & Role-Based Access (Admin, Teacher, Student)
 - Course Management (Create, Update, Delete, Enroll)
